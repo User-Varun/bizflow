@@ -1,12 +1,10 @@
-import { useNavigate } from "react-router";
 import supabase from "../../services/supabaseClient";
 import "../styles/generateBillStyles/billDetails.css";
 import { useBill } from "./hooks/useBill";
+import { ProductCard } from "../ui/ProductCard";
 
-export function BillDetails() {
+export function BillDetails({ setShowInvoice, setBillId }) {
   const { state, dispatch } = useBill();
-
-  const navigate = useNavigate();
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -57,8 +55,6 @@ export function BillDetails() {
     });
     try {
       await saveBillToDB(finalBill);
-
-      navigate("/invoice");
     } catch (err) {
       console.error("Error saving bill:", err);
     } finally {
@@ -196,7 +192,7 @@ export function BillDetails() {
         .from("bills")
         .insert([
           {
-            bill_type: finalBill.buyerName,
+            bill_type: finalBill.billType,
             buyer_name: finalBill.buyerName,
             buyer_address: finalBill.buyerAddress,
             buyer_phone_no: finalBill.buyerPhoneNo,
@@ -243,27 +239,36 @@ export function BillDetails() {
 
       console.log("SuccessFully Saved Bill items ", billItemsData);
 
+      // save the id the in bill store so invoice template can access it
+      console.log("BILL Details =    ", billDataRes.id, billDataRes[0].id);
+      setBillId(billDataRes[0].id);
+      setShowInvoice(true);
+      // dispatch({ type: "SET_FIELDS", payload: { bill_id: billDataRes[0].id } });
+      // dispatch({ type: "SET_FIELDS", payload: { showBill: true } });
+
       // Updates the inventory if everything goes right.
       await handleUpdateInventory(billItemsData);
 
-      // create a snapshot of the saved bill for invoice display
-      const snapshot = {
-        billId: billDataRes[0].id,
-        billType: finalBill.billType,
-        buyerName: finalBill.buyerName,
-        buyerAddress: finalBill.buyerAddress,
-        buyerPhoneNo: finalBill.buyerPhoneNo,
-        sellerName: finalBill.sellerName,
-        sellerAddress: finalBill.sellerAddress,
-        sellerPhoneNo: finalBill.sellerPhoneNo,
-        cgst: finalBill.cgst,
-        sgst: finalBill.sgst,
-        billItems: billItemsData,
-      };
+      // // create a snapshot of the saved bill for invoice display
+      // const snapshot = {
+      //   billId: billDataRes[0].id,
+      //   billType: finalBill.billType,
+      //   buyerName: finalBill.buyerName,
+      //   buyerAddress: finalBill.buyerAddress,
+      //   buyerPhoneNo: finalBill.buyerPhoneNo,
+      //   sellerName: finalBill.sellerName,
+      //   sellerAddress: finalBill.sellerAddress,
+      //   sellerPhoneNo: finalBill.sellerPhoneNo,
+      //   cgst: finalBill.cgst,
+      //   sgst: finalBill.sgst,
+      //   billItems: billItemsData,
+      //   billNo: billDataRes[0].bill_no,
+      //   createdAt: billDataRes[0].created_at,
+      // };
 
       // set the snapshot in context, show invoice, and clear the editable form fields
-      dispatch({ type: "SET_SNAPSHOT", payload: snapshot });
-      dispatch({ type: "SET_FIELDS", payload: { showBill: true } });
+      // dispatch({ type: "SET_SNAPSHOT", payload: snapshot });
+      // dispatch({ type: "SET_FIELDS", payload: { showBill: true } });
       // clear form fields so the user gets a fresh form when they come back
       dispatch({
         type: "SET_FIELDS",
@@ -402,15 +407,13 @@ export function BillDetails() {
           </div>
         </div>
 
-        <div id="billItemsContainer">
+        <div id="billItemsContainer" className="scroll-hide">
           {state.billItems && state.billItems.length > 0 ? (
             state.billItems.map((item) => {
+              console.log(item);
+
               return (
-                <div className="billItemCard">
-                  <span>Item : {item.name}</span>
-                  <span>Quantity : {item.item_qty}</span>
-                  <span>Rate :{item.rate}</span>
-                </div>
+                <ProductCard res={item} key={item.id} billDetailsCard={true} />
               );
             })
           ) : (
@@ -465,17 +468,6 @@ export function BillDetails() {
           {state.isSubmitting ? "Generating..." : "Generate Bill"}
         </button>
       </form>
-      <button
-        className="btn-temp"
-        onClick={() => {
-          dispatch({
-            type: "SET_FIELDS",
-            payload: { showBill: !state.showBill },
-          });
-        }}
-      >
-        Show Generated Bill
-      </button>
     </section>
   );
 }

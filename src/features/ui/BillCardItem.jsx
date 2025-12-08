@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { useBill } from "../generateBill/hooks/useBill";
 import { useSearchItems } from "../generateBill/hooks/useSearchItems";
-import "../styles/cardItem.css";
+import "../styles/productCard.css";
 
 export function BillCardItem({ res }) {
   const rateElRef = useRef(null);

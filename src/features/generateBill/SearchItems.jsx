@@ -4,20 +4,39 @@ import "../styles/generateBillStyles/searchItems.css";
 import supabase from "../../services/supabaseClient";
 import { SearchBar } from "../ui/SearchBar";
 import { BillCardItem } from "../ui/BillCardItem";
-import { useSearchItems } from "./hooks/useSearchItems";
 
 export function SearchItems() {
-  const { state, __dispatch__ } = useSearchItems();
-
   const [data, setData] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    async function fetchData() {
+      // load all products
+      const { data: allProd, error: errAllProd } = await supabase
+        .from("product_catalog")
+        .select("*")
+        .limit(4);
+
+      if (errAllProd) {
+        console.error(
+          "Error loading all Bills ( search items in generate bill screen.js ) ",
+          errAllProd
+        );
+        setData([]);
+      }
+      setData(allProd || []);
+    }
+
+    fetchData();
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        let query = supabase.from("product_catalog").select("*").limit(100);
-        const trimmed = state.searchQuery.trim();
+        let query = supabase.from("product_catalog").select("*").limit(4);
+        const trimmed = searchQuery.trim();
 
-        if (state.searchQuery) {
+        if (searchQuery) {
           query = query.ilike("name", `%${trimmed}%`);
 
           const { data: resData, error } = await query;
@@ -36,12 +55,12 @@ export function SearchItems() {
     }
 
     fetchData();
-  }, [state.searchQuery]);
+  }, [searchQuery]);
 
   return (
     <section id="searchFeatureContainer">
-      <SearchBar />
-      <div id="searchItemsContainer">
+      <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+      <div id="searchItemsContainer" className="scroll-hide">
         {data.length > 0 ? (
           data.map((res) => {
             return <BillCardItem res={res} key={res.id || res.name} />;

@@ -1,5 +1,5 @@
 #billDetails {
-  background-color: white;
+  background-color: #ececec;
   padding: 1rem;
   border-radius: 0.4rem;
   display: flex;
@@ -42,7 +42,7 @@
   padding: 1rem;
   border-radius: 0.4rem;
   display: grid;
-  height: 20vh;
+  height: 39vh;
   gap: 2rem;
   border-width: 1px;
   border-color: #ebe6e0;
@@ -51,11 +51,13 @@
   overflow-x: scroll;
   overflow-y: hidden;
   grid-template-columns: auto auto auto auto;
+  position: relative;
 }
 .emptyContainerMsg {
+  position: absolute;
+  top: 35%;
+  left: 35%;
   text-align: center;
-  width: 700px;
-  margin: 0 auto;
 }
 
 .form-sub-container {
@@ -120,4 +122,33 @@
 
 .btn-disabled {
   background-color: gray;
+}
+
+/* Hide scrollbar until hover */
+.scroll-hide {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.scroll-hide::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: transparent;
+}
+
+.scroll-hide::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 8px;
+}
+
+.scroll-hide:hover {
+  scrollbar-color: #b5b5b5 transparent;
+}
+
+.scroll-hide:hover::-webkit-scrollbar-thumb {
+  background: #b5b5b5;
+}
+
+.scroll-hide:hover::-webkit-scrollbar {
+  background: rgba(0, 0, 0, 0.05);
 }

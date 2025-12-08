@@ -1,5 +1,5 @@
 #searchFeatureContainer {
-  background-color: white;
+  background-color: #ececec;
   padding: 1rem;
   border-radius: 0.4rem;
   display: flex;
@@ -28,8 +28,36 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   justify-items: center;
+  align-items: center;
   gap: 1rem;
-  height: 65vh;
-  overflow-x: hidden;
   overflow-y: scroll;
+}
+
+/* Hide scrollbar until hover */
+.scroll-hide {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.scroll-hide::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: transparent;
+}
+
+.scroll-hide::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 8px;
+}
+
+.scroll-hide:hover {
+  scrollbar-color: #b5b5b5 transparent;
+}
+
+.scroll-hide:hover::-webkit-scrollbar-thumb {
+  background: #b5b5b5;
+}
+
+.scroll-hide:hover::-webkit-scrollbar {
+  background: rgba(0, 0, 0, 0.05);
 }

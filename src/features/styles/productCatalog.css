@@ -44,12 +44,17 @@ body {
 }
 
 #productCatalogContainer {
-  background-color: white;
+  background-color: gainsboro;
   padding: 1rem;
   border-radius: 0.4rem;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
   gap: 1rem;
-  height: 72vh;
+  height: 77vh;
+  overflow-y: scroll;
+  justify-items: center;
+  align-items: center;
 }
 
 #card {
@@ -89,13 +94,17 @@ body {
 /* close button */
 .modal-close {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 0.5rem;
+  right: 0.5rem;
   border: none;
   background: transparent;
-  font-size: 1.25rem;
+  font-size: 2.45rem;
   cursor: pointer;
   line-height: 1;
+  background-color: red;
+  color: white;
+  padding: 0.1rem 0.6rem;
+  border-radius: 2.1rem;
 }
 
 /* Ensure modal content remains interactive */
@@ -116,4 +125,71 @@ body {
 #innerHeader {
   display: flex;
   gap: 1rem;
+}
+
+.modal-heading {
+  font-size: 2.2rem;
+  font-weight: bold;
+  font-family: sans-serif;
+  text-align: center;
+}
+
+.container-addProd {
+  display: flex;
+  gap: 1rem;
+  flex-direction: column;
+  margin: 1rem 0rem;
+}
+
+.container-addProd input {
+  background-color: #e3e3e3;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.4rem;
+}
+
+.add-prod-btn {
+  padding: 0.5rem 1.5rem;
+  background-color: #59c759;
+  color: white;
+  font-weight: bold;
+  border-radius: 0.3rem;
+  width: 100%;
+}
+
+.add-prod-img {
+  background-color: rgb(170, 170, 170);
+}
+
+.errMsg {
+  display: flex;
+  justify-self: center;
+}
+
+/* Hide scrollbar until hover */
+.scroll-hide {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.scroll-hide::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: transparent;
+}
+
+.scroll-hide::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 8px;
+}
+
+.scroll-hide:hover {
+  scrollbar-color: #b5b5b5 transparent;
+}
+
+.scroll-hide:hover::-webkit-scrollbar-thumb {
+  background: #b5b5b5;
+}
+
+.scroll-hide:hover::-webkit-scrollbar {
+  background: rgba(0, 0, 0, 0.05);
 }

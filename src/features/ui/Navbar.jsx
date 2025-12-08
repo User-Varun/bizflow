@@ -18,7 +18,7 @@ export function Navbar() {
       </a>
 
       <ul id="nav-ul">
-        <NavLink
+        {/* <NavLink
           className="list-item "
           style={({ isActive }) =>
             isActive
@@ -30,7 +30,7 @@ export function Navbar() {
           <div className="list-item-sub-container">
             <FaHome style={{ marginRight: 8 }} /> <span>DashBoard</span>
           </div>
-        </NavLink>
+        </NavLink> */}
         <NavLink
           style={({ isActive }) =>
             isActive
@@ -38,7 +38,8 @@ export function Navbar() {
               : { color: "black" }
           }
           className="list-item"
-          to="/inventory"
+          to="/"
+          // to="/inventory"
         >
           <div className="list-item-sub-container">
             <FaBoxes style={{ marginRight: 8 }} />

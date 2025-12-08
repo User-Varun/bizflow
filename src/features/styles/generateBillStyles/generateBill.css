@@ -1,12 +1,13 @@
 body {
-  background-color: #f8f7f6;
   position: relative;
 }
 
 #generateBillContainer {
+  max-width: 95vw;
+  margin: 0.9rem auto;
   display: flex;
-  flex-direction: row;
-  width: 100%;
-  padding: 1rem 2rem;
   gap: 1rem;
+  background-color: white;
+  justify-content: center;
+  height: 84.7vh;
 }

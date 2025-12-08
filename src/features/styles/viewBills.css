@@ -1,0 +1,77 @@
+#viewBillContainer {
+  max-width: 95vw;
+  margin: 0.9rem auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.viewBillSearchBarContainer {
+  width: 100%;
+}
+
+/* .viewBillSearchBtn {
+} */
+
+.billContainer {
+  background-color: gainsboro;
+  padding: 1rem;
+  border-radius: 0.4rem;
+  display: flex;
+  gap: 1rem;
+  height: 77vh;
+  flex-direction: column;
+  overflow-y: scroll;
+}
+
+#viewBillInnerHeader {
+  display: flex;
+  gap: 1rem;
+}
+
+.viewBillFilter {
+  background-color: gainsboro;
+  border-radius: 0.5rem;
+  font-size: 1.5rem;
+  width: 15%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.viewBillFilter select {
+  border: none;
+  text-decoration: none;
+}
+.viewBillFilter select:focus {
+  border: none;
+}
+
+/* Hide scrollbar until hover */
+.scroll-hide {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.scroll-hide::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: transparent;
+}
+
+.scroll-hide::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 8px;
+}
+
+.scroll-hide:hover {
+  scrollbar-color: #b5b5b5 transparent;
+}
+
+.scroll-hide:hover::-webkit-scrollbar-thumb {
+  background: #b5b5b5;
+}
+
+.scroll-hide:hover::-webkit-scrollbar {
+  background: rgba(0, 0, 0, 0.05);
+}

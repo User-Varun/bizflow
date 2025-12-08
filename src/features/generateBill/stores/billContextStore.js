@@ -10,12 +10,13 @@ export const initialState = {
   buyerName: "",
   buyerAddress: "",
   buyerPhoneNo: "",
-  cgst: "",
-  sgst: "",
+  cgst: "2.5",
+  sgst: "2.5",
   billItems: [],
-  showBill: false,
+  // showBill: false,
   isSubmitting: false,
-  invoiceSnapshot: null,
+  // invoiceSnapshot: null,
+  // bill_id: null,
 };
 
 export function reducerFn(state, action) {

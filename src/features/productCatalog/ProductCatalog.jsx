@@ -6,8 +6,9 @@ import { ProductCard } from "../ui/ProductCard";
 
 export function ProductCatalog() {
   const [data, setData] = useState([]);
-  // const [error, setError] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [errMsg, setErrMsg] = useState("");
 
   // Form Data
   const [imageData, setImageData] = useState(null);
@@ -18,27 +19,54 @@ export function ProductCatalog() {
   const [hsnCode, setHsnCode] = useState("");
   const [unitName, setUnitName] = useState("");
   const [unitQty, setUnitQty] = useState(0);
-  const [itemQty, setItemQty] = useState(0);
-
-  // search query
-  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     async function fetchData() {
-      let { data: resData, error } = await supabase
+      // load all products
+      const { data: allProd, error: errAllProd } = await supabase
         .from("product_catalog")
-        .select("*");
+        .select("*")
+        .limit(8);
 
-      if (error) {
-        // setError(error); // avoid calling commented-out setter
-        console.error(error);
+      if (errAllProd) {
+        console.error(
+          "Error loading all Bills ( product catalog.js ) ",
+          errAllProd
+        );
+        setData([]);
       }
-
-      setData(resData);
+      setData(allProd || []);
     }
 
     fetchData();
   }, []);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        let query = supabase.from("product_catalog").select("*").limit(4);
+        const trimmed = searchQuery.trim();
+
+        if (searchQuery) {
+          query = query.ilike("name", `%${trimmed}%`);
+
+          const { data: resData, error } = await query;
+
+          if (error) {
+            console.error("Supbase Error", error);
+            setData([]);
+            return;
+          }
+          setData(resData || []);
+        }
+      } catch (err) {
+        console.error(err);
+        setData([]);
+      }
+    }
+
+    fetchData();
+  }, [searchQuery]);
 
   function toggleForm() {
     setIsOpen(!isOpen);
@@ -51,7 +79,8 @@ export function ProductCatalog() {
   async function handleSubmit(e) {
     e.preventDefault();
 
-    if (!imageData || !name || !brand) return alert("Please fill the data");
+    if (!imageData || !name || !brand)
+      return setErrMsg("Please Fill The data before submitting!");
 
     try {
       console.log("uploading started..");
@@ -87,7 +116,6 @@ export function ProductCatalog() {
             hsn_code: hsnCode,
             unit_name: unitName,
             unit_qty: unitQty,
-            item_qty: itemQty,
           },
         ])
         .select();
@@ -98,6 +126,18 @@ export function ProductCatalog() {
         "data uploaded in product catalog successfully",
         insertedRows
       );
+
+      // set the input fields/state data to their initial value and close the modal
+
+      setImageData(null);
+      setImgURL("");
+      setName("");
+      setBrand("");
+      setMrp("");
+      setHsnCode("");
+      setUnitName("");
+      setUnitQty("");
+      setIsOpen(!isOpen);
     } catch (error) {
       console.error(error);
     }
@@ -113,24 +153,27 @@ export function ProductCatalog() {
             aria-modal="true"
             onClick={(e) => e.stopPropagation()}
           >
-            <h1>Add Product</h1>
-            <div
-              style={{ display: "flex", gap: "1rem", flexDirection: "column" }}
-            >
+            <h1 className="modal-heading">Add Product</h1>
+            <div className="container-addProd ">
               <input
                 type="file"
                 accept="image/*"
                 onChange={handleImageChange}
+                placeholder="Pick Your Image"
+                className="add-prod-img"
+                required
               />
               <input
                 type="text"
                 onChange={(e) => setName(e.target.value)}
                 placeholder="product name"
+                required
               />
               <input
                 type="text"
                 onChange={(e) => setBrand(e.target.value)}
                 placeholder="product brand"
+                required
               />
               <input
                 type="number"
@@ -138,6 +181,7 @@ export function ProductCatalog() {
                   setMrp(e.target.value);
                 }}
                 placeholder="product MRP"
+                required
               />
               <input
                 type="number"
@@ -145,34 +189,34 @@ export function ProductCatalog() {
                   setHsnCode(e.target.value);
                 }}
                 placeholder="HSN Code"
+                required
               />
               <input
                 type="text"
                 onChange={(e) => {
                   setUnitName(e.target.value);
                 }}
-                placeholder="box or pcs or pkt or jar"
+                placeholder="Unit Name (box/pcs/pkt/jar)"
+                required
               />
               <input
                 type="number"
                 onChange={(e) => {
                   setUnitQty(e.target.value);
                 }}
-                placeholder="Qty of your unit in number"
-              />
-              <input
-                type="number"
-                onChange={(e) => {
-                  setItemQty(e.target.value);
-                }}
-                placeholder="how many of those units"
+                placeholder="Unit Quantity (say 5 )"
+                required
               />
             </div>
 
             {/* Add your form fields here */}
-            <button onClick={handleSubmit}>Submit</button>
+            <button className="add-prod-btn" onClick={handleSubmit}>
+              Submit
+            </button>
+            {errMsg ? <span className="errMsg">{errMsg}</span> : null}
+
             <button
-              className="modal-close"
+              className="modal-close "
               onClick={toggleForm}
               aria-label="Close"
             >
@@ -184,19 +228,21 @@ export function ProductCatalog() {
 
       <div id="innerHeader">
         <SearchBar
+          widthInPercent={70}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
-          widthInPercent={70}
         />
         <button className="prodCBtn" onClick={toggleForm}>
           + Add Product
         </button>
       </div>
 
-      <section id="productCatalogContainer">
+      <section id="productCatalogContainer" className="scroll-hide">
         {data.length > 0 ? (
           data.map((res) => {
-            return <ProductCard res={res} key={res.id || res.name} />;
+            return (
+              <ProductCard res={res} key={res.id || res.name} prodCat={true} />
+            );
           })
         ) : (
           <h1>No products!</h1>
