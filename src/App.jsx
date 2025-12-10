@@ -8,22 +8,28 @@ import { ProductCatalog } from "./features/productCatalog/ProductCatalog";
 import { GenerateBill } from "./features/generateBill/GenerateBill";
 import { BillProvider } from "./features/generateBill/contexts/billContext";
 import { SearchItemsProvider } from "./features/generateBill/contexts/searchItemsContext";
-
 import { ViewBills } from "./features/viewBills/ViewBills";
+import { AuthProvider } from "./features/auth/contexts/AuthProvider";
+import { ProtectedRoute } from "./features/auth/components/ProtectedRoute";
+import { Login } from "./features/auth/Login";
 
 function AppLayout() {
   return (
-    <>
+    <ProtectedRoute>
       <Navbar />
 
       <SearchItemsProvider>
         <Outlet />
       </SearchItemsProvider>
-    </>
+    </ProtectedRoute>
   );
 }
 
 const router = createBrowserRouter([
+  {
+    path: "/login",
+    element: <Login />,
+  },
   {
     path: "/",
     element: <AppLayout />,
@@ -58,7 +64,11 @@ const router = createBrowserRouter([
 ]);
 
 function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
+  );
 }
 
 export default App;

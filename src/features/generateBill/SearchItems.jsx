@@ -1,61 +1,97 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import "../styles/generateBillStyles/searchItems.css";
 import supabase from "../../services/supabaseClient";
 import { SearchBar } from "../ui/SearchBar";
 import { BillCardItem } from "../ui/BillCardItem";
+import { useBill } from "./hooks/useBill";
 
 export function SearchItems() {
+  const { state, _dispatch_ } = useBill();
   const [data, setData] = useState([]);
+  const [defaultItems, setDefaultItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
 
-  useEffect(() => {
-    async function fetchData() {
-      // load all products
-      const { data: allProd, error: errAllProd } = await supabase
-        .from("product_catalog")
-        .select("*")
-        .limit(4);
+  const base = useMemo(
+    () =>
+      state.billType === "Credit"
+        ? supabase.from("inventory")
+        : supabase.from("product_catalog"),
+    [state.billType]
+  );
 
-      if (errAllProd) {
-        console.error(
-          "Error loading all Bills ( search items in generate bill screen.js ) ",
-          errAllProd
-        );
+  // Load defaults on mount/billType change
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadDefaults() {
+      try {
+        const { data: defaultData, error: defaultErr } = await base
+          .select("*")
+          .limit(4);
+
+        if (!isActive) return;
+        if (defaultErr) {
+          console.error("Supbase Error", defaultErr);
+          setDefaultItems([]);
+          setData([]);
+          return;
+        }
+        setDefaultItems(defaultData || []);
+        setData(defaultData || []);
+      } catch (err) {
+        if (!isActive) return;
+        console.error(err);
+        setDefaultItems([]);
         setData([]);
       }
-      setData(allProd || []);
     }
 
-    fetchData();
-  }, []);
+    loadDefaults();
+
+    return () => {
+      isActive = false;
+    };
+  }, [base]);
 
   useEffect(() => {
-    async function fetchData() {
+    let isActive = true;
+    const trimmed = searchQuery.trim();
+
+    const timer = setTimeout(async () => {
       try {
-        let query = supabase.from("product_catalog").select("*").limit(4);
-        const trimmed = searchQuery.trim();
-
-        if (searchQuery) {
-          query = query.ilike("name", `%${trimmed}%`);
-
-          const { data: resData, error } = await query;
-
-          if (error) {
-            console.error("Supbase Error", error);
-            setData([]);
-            return;
-          }
-          setData(resData || []);
+        // For empty or very short queries, load cached defaults
+        if (trimmed.length < 2) {
+          if (!isActive) return;
+          setData(defaultItems);
+          return;
         }
+
+        const { data: resData, error } = await base
+          .select("*")
+          .ilike("name", `%${trimmed}%`)
+          .limit(4);
+
+        if (!isActive) return;
+
+        if (error) {
+          console.error("Supbase Error", error);
+          setData([]);
+          return;
+        }
+        setData(resData || []);
       } catch (err) {
+        if (!isActive) return;
         console.error(err);
         setData([]);
       }
-    }
+    }, 250); // throttle/debounce search
 
-    fetchData();
-  }, [searchQuery]);
+    return () => {
+      isActive = false;
+      clearTimeout(timer);
+    };
+  }, [searchQuery, base, defaultItems]);
 
   return (
     <section id="searchFeatureContainer">

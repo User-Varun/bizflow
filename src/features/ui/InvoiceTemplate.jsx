@@ -8,8 +8,6 @@ export function InvoiceTemplate({ id }) {
   const [data, setData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  console.log("***********ID***************", id);
-
   useEffect(() => {
     [0];
     async function fetchData() {
@@ -216,13 +214,13 @@ export function InvoiceTemplate({ id }) {
               <h2 className="company">{data[0].buyer_name}</h2>
               <p className="text-s">{data[0].buyer_address}</p>
               <p className="text-s">Phone: {data[0].buyer_phone_no}</p>
-              <p className="text-s">GST : 34895374 (needs edit)</p>
+              <p className="text-s">GST : {data[0].gst}</p>
             </div>
           </header>
 
           <section className="bill-meta">
             <div className="container-pad">
-              <span>GSTIN: 23BSPQS1698K1ZU (needs edit)</span>
+              <span>GSTIN: {data[0].gst_in}</span>
             </div>
             <div className="inv-center">
               <h1 className="inv-title">GST INVOICE</h1>

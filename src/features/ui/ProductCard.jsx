@@ -2,22 +2,59 @@ import "../styles/productCard.css";
 
 export function ProductCard({ res, prodCat = null, billDetailsCard = null }) {
   return (
-    <div className="cardItem" key={res.id || res.name}>
+    <div
+      className={[
+        "cardItem",
+        billDetailsCard && "cardItem-in-bill-details",
+        prodCat && "cardItem-in-prod-catalog",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      key={res.id || res.name}
+    >
       <img
         src={`${res.img_url}`}
-        className={`cardImg ${
-          billDetailsCard ? "inside-bill-details-card-img " : null
+        className={`${
+          billDetailsCard ? "inside-bill-details-card-img " : "cardImg"
         } `}
       />
-      <span id="nameAndBrand">
-        {res.name} by {res.brand}
-      </span>
+      <div className="card-content">
+        <h3 className="product-name">{res.name}</h3>
+        <p className="product-brand">by {res.brand}</p>
 
-      <span>
-        {res.unit_qty} {res.unit_name} at ₹{res.mrp}
-      </span>
-      {prodCat ? null : <span>Quantity: {res.item_qty}</span>}
-      <span>HSN code: {res.hsn_code}</span>
+        <div className="card-details">
+          <div className="detail-item">
+            {billDetailsCard ? (
+              <>
+                <label>Rate</label>
+                <p className="detail-value price">₹{res.rate}</p>
+              </>
+            ) : (
+              <>
+                <label>Price</label>
+                <p className="detail-value price">₹{res.mrp}</p>
+              </>
+            )}
+          </div>
+          <div className="detail-item">
+            <label>Pack Size</label>
+            <p className="detail-value">
+              {res.unit_qty} <strong>Per</strong> {res.unit_name}
+            </p>
+          </div>
+        </div>
+
+        {!prodCat && (
+          <div className="detail-item full-width">
+            <label>Quantity in Stock</label>
+            <p className="detail-value">{res.item_qty}</p>
+          </div>
+        )}
+        <div className="detail-item full-width">
+          <label>HSN Code</label>
+          <p className="detail-value">{res.hsn_code}</p>
+        </div>
+      </div>
     </div>
   );
 }

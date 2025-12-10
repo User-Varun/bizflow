@@ -7,10 +7,9 @@ import {
   FaFileInvoiceDollar,
   FaReceipt,
 } from "react-icons/fa";
+import { UserProfile } from "./UserProfile";
 
 export function Navbar() {
-  // const [activeTab, setActiveTab] = useState('dashboard');
-
   return (
     <nav id="nav">
       <a href="#" id="nav-logo">
@@ -89,6 +88,8 @@ export function Navbar() {
           </div>
         </NavLink>
       </ul>
+
+      <UserProfile />
     </nav>
   );
 }

@@ -62,7 +62,7 @@ export function BillCardItem({ res }) {
   }
 
   return (
-    <div className="cardItem" key={res.id || res.name}>
+    <div className="cardItem height-adjustment" key={res.id || res.name}>
       <img src={`${res.img_url}`} className="cardImg" />
       <span id="nameAndBrand">
         {res.name} by {res.brand}

@@ -57,6 +57,39 @@ body {
   align-items: center;
 }
 
+.product-catalog-empty {
+  height: 77vh;
+  border-radius: 0.4rem;
+  background: linear-gradient(135deg, #f7f9fc 0%, #eef1f7 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  color: #1f2a44;
+  text-align: center;
+  padding: 1.5rem;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.07);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.product-catalog-empty svg {
+  width: 140px;
+  height: 140px;
+  fill: #7a8cc4;
+}
+
+.product-catalog-empty h1 {
+  font-size: 1.4rem;
+  margin: 0;
+}
+
+.product-catalog-empty p {
+  margin: 0;
+  color: #53607a;
+}
+
 #card {
   background-color: rgb(63, 62, 62);
   color: white;
@@ -114,12 +147,12 @@ body {
 }
 
 .prodCBtn {
-  background-color: blue;
   color: white !important;
   padding: 1rem 2rem;
   border-radius: 0.6rem;
   cursor: pointer;
   width: 30%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 #innerHeader {

@@ -4,17 +4,48 @@ body {
 }
 
 #inventoryContainer {
+  background-color: gainsboro;
   padding: 1rem;
   border-radius: 0.4rem;
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1fr;
   grid-template-rows: 1fr 1fr;
-  justify-items: center;
   gap: 1rem;
   height: 77vh;
-  background-color: gainsboro;
   overflow-y: scroll;
+  justify-items: center;
   align-items: center;
+}
+
+.inventory-empty {
+  height: 77vh;
+  border-radius: 0.4rem;
+  background: linear-gradient(135deg, #f7f9fc 0%, #eef1f7 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  color: #1f2a44;
+  text-align: center;
+  padding: 1.5rem;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.07);
+}
+
+.inventory-empty svg {
+  width: 140px;
+  height: 140px;
+  fill: #7a8cc4;
+}
+
+.inventory-empty h1 {
+  font-size: 1.4rem;
+  margin: 0;
+}
+
+.inventory-empty p {
+  margin: 0;
+  color: #53607a;
 }
 
 /* Hide scrollbar until hover */

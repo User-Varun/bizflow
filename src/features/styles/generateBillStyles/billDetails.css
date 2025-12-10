@@ -41,16 +41,13 @@
   background-color: #f8f7f6;
   padding: 1rem;
   border-radius: 0.4rem;
-  display: grid;
   height: 39vh;
+  display: flex;
   gap: 2rem;
   border-width: 1px;
   border-color: #ebe6e0;
   align-items: center;
-  justify-content: flex-start;
   overflow-x: scroll;
-  overflow-y: hidden;
-  grid-template-columns: auto auto auto auto;
   position: relative;
 }
 .emptyContainerMsg {

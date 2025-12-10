@@ -423,7 +423,14 @@ export function BillDetails({ setShowInvoice, setBillId }) {
           )}
         </div>
         <div className="form-sub-container">
-          <p>Your Total : 💵</p>
+          <p>
+            Your Total : ₹
+            {state.billItems.reduce(
+              (acc, item) =>
+                acc + Number(item.rate || 0) * Number(item.item_qty || 0),
+              0
+            )}
+          </p>
           <div className="form-sub-container2">
             <div>
               <em>CGST </em>{" "}
