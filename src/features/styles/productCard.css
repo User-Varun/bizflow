@@ -4,14 +4,14 @@
   border-radius: 12px;
   padding: 1rem;
   width: 20rem;
-  height: 25.7rem;
+  min-height: 25.7rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   border: 1px solid #f0f0f0;
   transition: all 0.3s ease;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .cardItem-in-bill-details {
@@ -196,9 +196,30 @@
 }
 
 .cardItem-in-prod-catalog {
-  height: 22.7rem !important;
+  min-height: auto;
 }
 
 .height-adjustment {
   height: 24rem !important;
+}
+
+.edit-btn {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  margin-top: 0.5rem;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.edit-btn:hover {
+  background: #1d4ed8;
+}
+
+.edit-btn:active {
+  opacity: 0.9;
 }

@@ -1,6 +1,11 @@
 import "../styles/productCard.css";
 
-export function ProductCard({ res, prodCat = null, billDetailsCard = null }) {
+export function ProductCard({
+  res,
+  prodCat = null,
+  billDetailsCard = null,
+  onEdit = null,
+}) {
   const truncate = (text, max = 20) => {
     if (!text) return "";
     const str = String(text);
@@ -62,6 +67,11 @@ export function ProductCard({ res, prodCat = null, billDetailsCard = null }) {
           <label>HSN Code</label>
           <p className="detail-value">{res.hsn_code}</p>
         </div>
+        {prodCat && onEdit && (
+          <button className="edit-btn" onClick={() => onEdit(res)}>
+            ✎ Edit
+          </button>
+        )}
       </div>
     </div>
   );

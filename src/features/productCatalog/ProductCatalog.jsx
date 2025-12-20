@@ -15,6 +15,8 @@ export function ProductCatalog() {
   const [pageSize, setPageSize] = useState(8);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingProductId, setEditingProductId] = useState(null);
 
   // Form Data
   const [imageData, setImageData] = useState(null);
@@ -26,69 +28,16 @@ export function ProductCatalog() {
   const [unitName, setUnitName] = useState("");
   const [unitQty, setUnitQty] = useState(0);
 
+  // Error message cleanup effect
   useEffect(() => {
-    async function fetchData() {
-      // load all products
-      const { data: allProd, error: errAllProd } = await supabase
-        .from("product_catalog")
-        .select("*")
-        .limit(8);
-
-      if (errAllProd) {
-        console.error(
-          "Error loading all Bills ( product catalog.js ) ",
-          errAllProd
-        );
-        setData([]);
-      }
-      setData(allProd || []);
-    }
-
-    // erase error message after 3 sec
     if (errMsg) {
-      setTimeout(function () {
+      const timer = setTimeout(() => {
         setErrMsg("");
       }, 3000);
-    }
-
-    fetchData();
-  }, [errMsg]);
-  useEffect(() => {
-    // erase error message after 3 sec
-    if (errMsg) {
-      const t = setTimeout(function () {
-        setErrMsg("");
-      }, 3000);
-      return () => clearTimeout(t);
+      return () => clearTimeout(timer);
     }
   }, [errMsg]);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        let query = supabase.from("product_catalog").select("*").limit(4);
-        const trimmed = searchQuery.trim();
-
-        if (searchQuery) {
-          query = query.ilike("name", `%${trimmed}%`);
-
-          const { data: resData, error } = await query;
-
-          if (error) {
-            console.error("Supbase Error", error);
-            setData([]);
-            return;
-          }
-          setData(resData || []);
-        }
-      } catch (err) {
-        console.error(err);
-        setData([]);
-      }
-    }
-
-    fetchData();
-  }, [searchQuery]);
   useEffect(() => {
     async function fetchData() {
       try {
@@ -132,6 +81,36 @@ export function ProductCatalog() {
 
   function toggleForm() {
     setIsOpen(!isOpen);
+    if (isOpen) {
+      resetForm();
+    }
+  }
+
+  function resetForm() {
+    setImageData(null);
+    setImgURL("");
+    setName("");
+    setBrand("");
+    setMrp(0);
+    setHsnCode("");
+    setUnitName("");
+    setUnitQty(0);
+    setIsEditMode(false);
+    setEditingProductId(null);
+  }
+
+  function handleEdit(product) {
+    setIsEditMode(true);
+    setEditingProductId(product.id);
+    setName(product.name);
+    setBrand(product.brand);
+    setMrp(product.mrp);
+    setHsnCode(product.hsn_code);
+    setUnitName(product.unit_name);
+    setUnitQty(product.unit_qty);
+    setImgURL(product.img_url);
+    setImageData(null);
+    setIsOpen(true);
   }
 
   function handleImageChange(e) {
@@ -141,15 +120,15 @@ export function ProductCatalog() {
   async function handleSubmit(e) {
     e.preventDefault();
 
-    let publicUrl = null;
-
     if (!name || !brand || !mrp || !hsnCode || !unitName || !unitQty)
       return setErrMsg("Please Fill The data before submitting!");
 
     try {
-      console.log("uploading started..");
       setIsSubmitting(true);
 
+      let publicUrl = imgURL; // default to existing URL
+
+      // Upload new image only if changed
       if (imageData) {
         const fileName = `${Date.now()}-${imageData.name}`;
 
@@ -167,16 +146,13 @@ export function ProductCatalog() {
           publicUrlRes?.data?.publicUrl ||
           publicUrlRes?.publicUrl ||
           publicUrlRes?.publicURL;
-
-        setImgURL(publicUrl);
-
-        console.log("img, Done sucessfully!", imgURL);
       }
 
-      const { data: insertedRows, error: insertError } = await supabase
-        .from("product_catalog")
-        .insert([
-          {
+      if (isEditMode && editingProductId) {
+        // Update existing product
+        const { error: updateError } = await supabase
+          .from("product_catalog")
+          .update({
             name,
             brand,
             img_url: publicUrl,
@@ -184,31 +160,48 @@ export function ProductCatalog() {
             hsn_code: hsnCode,
             unit_name: unitName,
             unit_qty: unitQty,
-          },
-        ])
-        .select();
+          })
+          .eq("id", editingProductId);
 
-      if (insertError) throw insertError;
+        if (updateError) throw updateError;
 
-      console.log(
-        "data uploaded in product catalog successfully",
-        insertedRows
-      );
+        console.log("product updated successfully");
+      } else {
+        // Insert new product
+        const { data: insertedRows, error: insertError } = await supabase
+          .from("product_catalog")
+          .insert([
+            {
+              name,
+              brand,
+              img_url: publicUrl,
+              mrp,
+              hsn_code: hsnCode,
+              unit_name: unitName,
+              unit_qty: unitQty,
+            },
+          ])
+          .select();
 
-      // set the input fields/state data to their initial value and close the modal
+        if (insertError) throw insertError;
 
-      setImageData(null);
-      setImgURL("");
-      setName("");
-      setBrand("");
-      setMrp("");
-      setHsnCode("");
-      setUnitName("");
-      setUnitQty("");
-      setIsOpen(!isOpen);
-      setIsSubmitting(false);
+        console.log(
+          "data uploaded in product catalog successfully",
+          insertedRows
+        );
+      }
+
+      // Reset and close modal
+      resetForm();
+      setIsOpen(false);
+      // Refresh data
+      setPage(1);
+      setSearchQuery("");
     } catch (error) {
       console.error(error);
+      setErrMsg("Error saving product. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -223,7 +216,9 @@ export function ProductCatalog() {
             aria-modal="true"
             onClick={(e) => e.stopPropagation()}
           >
-            <h1 className="modal-heading">Add Product</h1>
+            <h1 className="modal-heading">
+              {isEditMode ? "Edit Product" : "Add Product"}
+            </h1>
             <div className="container-addProd ">
               <input
                 type="file"
@@ -284,13 +279,20 @@ export function ProductCatalog() {
               className={isSubmitting ? "add-prod-submitting" : "add-prod-btn"}
               onClick={handleSubmit}
             >
-              {isSubmitting ? "Submitting..." : "Submit"}
+              {isSubmitting
+                ? "Submitting..."
+                : isEditMode
+                ? "Update Product"
+                : "Submit"}
             </button>
             {errMsg ? <span className="errMsg">{errMsg}</span> : null}
 
             <button
               className="modal-close "
-              onClick={toggleForm}
+              onClick={() => {
+                resetForm();
+                setIsOpen(false);
+              }}
               aria-label="Close"
             >
               ×
@@ -314,7 +316,12 @@ export function ProductCatalog() {
         <>
           <section id="productCatalogContainer" className="scroll-hide">
             {data.map((res) => (
-              <ProductCard res={res} key={res.id || res.name} prodCat={true} />
+              <ProductCard
+                res={res}
+                key={res.id || res.name}
+                prodCat={true}
+                onEdit={handleEdit}
+              />
             ))}
           </section>
           <PaginationComp
