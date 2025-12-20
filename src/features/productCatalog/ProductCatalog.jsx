@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import supabase from "../../services/supabaseClient";
 import { SearchBar } from "../ui/SearchBar";
 import { ProductCard } from "../ui/ProductCard";
+import { PaginationComp } from "../ui/PaginationComp";
 
 export function ProductCatalog() {
   const [data, setData] = useState([]);
@@ -10,6 +11,10 @@ export function ProductCatalog() {
   const [searchQuery, setSearchQuery] = useState("");
   const [errMsg, setErrMsg] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(8);
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Form Data
   const [imageData, setImageData] = useState(null);
@@ -48,6 +53,15 @@ export function ProductCatalog() {
 
     fetchData();
   }, [errMsg]);
+  useEffect(() => {
+    // erase error message after 3 sec
+    if (errMsg) {
+      const t = setTimeout(function () {
+        setErrMsg("");
+      }, 3000);
+      return () => clearTimeout(t);
+    }
+  }, [errMsg]);
 
   useEffect(() => {
     async function fetchData() {
@@ -74,6 +88,46 @@ export function ProductCatalog() {
     }
 
     fetchData();
+  }, [searchQuery]);
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setIsLoading(true);
+        const trimmed = searchQuery.trim();
+
+        let query = supabase
+          .from("product_catalog")
+          .select("*", { count: "exact" })
+          .order("id", { ascending: false });
+
+        if (trimmed) {
+          query = query.or(`name.ilike.%${trimmed}%,brand.ilike.%${trimmed}%`);
+        }
+
+        const from = (page - 1) * pageSize;
+        const to = from + pageSize - 1;
+
+        const { data: rows, count, error } = await query.range(from, to);
+
+        if (error) throw error;
+
+        setData(rows || []);
+        setTotal(count || 0);
+      } catch (err) {
+        console.error("Error loading product catalog", err);
+        setData([]);
+        setTotal(0);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [searchQuery, page, pageSize]);
+
+  // Reset to first page when search changes
+  useEffect(() => {
+    setPage(1);
   }, [searchQuery]);
 
   function toggleForm() {
@@ -257,11 +311,23 @@ export function ProductCatalog() {
       </div>
 
       {data.length > 0 ? (
-        <section id="productCatalogContainer" className="scroll-hide">
-          {data.map((res) => (
-            <ProductCard res={res} key={res.id || res.name} prodCat={true} />
-          ))}
-        </section>
+        <>
+          <section id="productCatalogContainer" className="scroll-hide">
+            {data.map((res) => (
+              <ProductCard res={res} key={res.id || res.name} prodCat={true} />
+            ))}
+          </section>
+          <PaginationComp
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onChange={setPage}
+            onPageSizeChange={setPageSize}
+            disabled={isLoading}
+            showFirstLast={true}
+            siblingCount={1}
+          />
+        </>
       ) : (
         <div className="product-catalog-empty">
           <svg viewBox="0 0 64 64" aria-hidden="true">

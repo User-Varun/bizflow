@@ -1,6 +1,12 @@
 import "../styles/productCard.css";
 
 export function ProductCard({ res, prodCat = null, billDetailsCard = null }) {
+  const truncate = (text, max = 20) => {
+    if (!text) return "";
+    const str = String(text);
+    return str.length > max ? `${str.slice(0, max).trimEnd()}...` : str;
+  };
+
   return (
     <div
       className={[
@@ -19,7 +25,9 @@ export function ProductCard({ res, prodCat = null, billDetailsCard = null }) {
         } `}
       />
       <div className="card-content">
-        <h3 className="product-name">{res.name}</h3>
+        <h3 className="product-name" title={res.name || ""}>
+          {truncate(res.name, 30)}
+        </h3>
         <p className="product-brand">by {res.brand}</p>
 
         <div className="card-details">

@@ -11,10 +11,11 @@ body {
 
 #prodCatalogContainer {
   max-width: 95vw;
-  margin: 0.9rem auto;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 2.5rem;
+  gap: 0.7rem;
+  padding-top: 0.6rem;
 }
 #heading {
   font-size: 1.9rem;
@@ -51,7 +52,7 @@ body {
   grid-template-columns: 1fr 1fr 1fr 1fr;
   grid-template-rows: 1fr 1fr;
   gap: 1rem;
-  height: 77vh;
+  height: 73.4vh;
   overflow-y: scroll;
   justify-items: center;
   align-items: center;
@@ -60,7 +61,8 @@ body {
 .product-catalog-empty {
   height: 77vh;
   border-radius: 0.4rem;
-  background: linear-gradient(135deg, #f7f9fc 0%, #eef1f7 100%);
+  /* background: linear-gradient(135deg, #f7f9fc 0%, #eef1f7 100%); */
+  background-color: gainsboro;
   display: flex;
   flex-direction: column;
   align-items: center;

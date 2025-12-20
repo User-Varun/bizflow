@@ -2,55 +2,55 @@ import { useEffect, useState } from "react";
 import supabase from "../../services/supabaseClient";
 import { ProductCard } from "../ui/ProductCard";
 import { SearchBar } from "../ui/SearchBar";
+import { PaginationComp } from "../ui/PaginationComp";
 import "../styles/inventory.css";
 
 export function Inventory() {
   const [inventory, setInventory] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-
-  useEffect(() => {
-    async function fetchData() {
-      // load all products
-      const { data: allProd, error: errAllProd } = await supabase
-        .from("inventory")
-        .select("*")
-        .limit(8);
-
-      if (errAllProd) {
-        console.error("Error loading all Bills ( inventory.js ) ", errAllProd);
-        setInventory([]);
-      }
-      setInventory(allProd || []);
-    }
-
-    fetchData();
-  }, []);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(8);
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        let query = supabase.from("inventory").select("*").limit(4);
+        setIsLoading(true);
         const trimmed = searchQuery.trim();
 
-        if (searchQuery) {
+        let query = supabase
+          .from("inventory")
+          .select("*", { count: "exact" })
+          .order("id", { ascending: false });
+
+        if (trimmed) {
           query = query.ilike("name", `%${trimmed}%`);
-
-          const { data: resData, error } = await query;
-
-          if (error) {
-            console.error("Supbase Error", error);
-            setInventory([]);
-            return;
-          }
-          setInventory(resData || []);
         }
+
+        const from = (page - 1) * pageSize;
+        const to = from + pageSize - 1;
+
+        const { data: rows, count, error } = await query.range(from, to);
+
+        if (error) throw error;
+
+        setInventory(rows || []);
+        setTotal(count || 0);
       } catch (err) {
-        console.error(err);
+        console.error("Error loading inventory", err);
         setInventory([]);
+        setTotal(0);
+      } finally {
+        setIsLoading(false);
       }
     }
 
     fetchData();
+  }, [searchQuery, page, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
   }, [searchQuery]);
 
   return (
@@ -73,6 +73,16 @@ export function Inventory() {
           ))}
         </div>
       )}
+      <PaginationComp
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        onChange={setPage}
+        onPageSizeChange={setPageSize}
+        disabled={isLoading}
+        showFirstLast={true}
+        siblingCount={1}
+      />
     </section>
   );
 }
