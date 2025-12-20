@@ -226,3 +226,13 @@ body {
 .scroll-hide:hover::-webkit-scrollbar {
   background: rgba(0, 0, 0, 0.05);
 }
+
+.add-prod-submitting {
+  background-color: gray;
+  padding: 0.5rem 1.5rem;
+  background-color: #59c759;
+  color: white;
+  font-weight: bold;
+  border-radius: 0.3rem;
+  width: 100%;
+}

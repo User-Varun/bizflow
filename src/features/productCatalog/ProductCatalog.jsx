@@ -9,6 +9,7 @@ export function ProductCatalog() {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [errMsg, setErrMsg] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form Data
   const [imageData, setImageData] = useState(null);
@@ -38,8 +39,15 @@ export function ProductCatalog() {
       setData(allProd || []);
     }
 
+    // erase error message after 3 sec
+    if (errMsg) {
+      setTimeout(function () {
+        setErrMsg("");
+      }, 3000);
+    }
+
     fetchData();
-  }, []);
+  }, [errMsg]);
 
   useEffect(() => {
     async function fetchData() {
@@ -79,31 +87,37 @@ export function ProductCatalog() {
   async function handleSubmit(e) {
     e.preventDefault();
 
-    if (!imageData || !name || !brand)
+    let publicUrl = null;
+
+    if (!name || !brand || !mrp || !hsnCode || !unitName || !unitQty)
       return setErrMsg("Please Fill The data before submitting!");
 
     try {
       console.log("uploading started..");
-      const fileName = `${Date.now()}-${imageData.name}`;
+      setIsSubmitting(true);
 
-      const { data: uploadImgData, error: imgUploadError } =
-        await supabase.storage.from("images").upload(fileName, imageData);
+      if (imageData) {
+        const fileName = `${Date.now()}-${imageData.name}`;
 
-      if (imgUploadError) throw imgUploadError;
+        const { data: uploadImgData, error: imgUploadError } =
+          await supabase.storage.from("images").upload(fileName, imageData);
 
-      // getPublicUrl returns different shapes depending on SDK version; handle both
-      const publicUrlRes = supabase.storage
-        .from("images")
-        .getPublicUrl(uploadImgData.path);
+        if (imgUploadError) throw imgUploadError;
 
-      const publicUrl =
-        publicUrlRes?.data?.publicUrl ||
-        publicUrlRes?.publicUrl ||
-        publicUrlRes?.publicURL;
+        // getPublicUrl returns different shapes depending on SDK version; handle both
+        const publicUrlRes = supabase.storage
+          .from("images")
+          .getPublicUrl(uploadImgData.path);
 
-      setImgURL(publicUrl);
+        publicUrl =
+          publicUrlRes?.data?.publicUrl ||
+          publicUrlRes?.publicUrl ||
+          publicUrlRes?.publicURL;
 
-      console.log("img, Done sucessfully!", imgURL);
+        setImgURL(publicUrl);
+
+        console.log("img, Done sucessfully!", imgURL);
+      }
 
       const { data: insertedRows, error: insertError } = await supabase
         .from("product_catalog")
@@ -138,10 +152,12 @@ export function ProductCatalog() {
       setUnitName("");
       setUnitQty("");
       setIsOpen(!isOpen);
+      setIsSubmitting(false);
     } catch (error) {
       console.error(error);
     }
   }
+
   return (
     // add className for CSS fallback blur when modal is open
     <section id="prodCatalogContainer">
@@ -210,8 +226,11 @@ export function ProductCatalog() {
             </div>
 
             {/* Add your form fields here */}
-            <button className="add-prod-btn" onClick={handleSubmit}>
-              Submit
+            <button
+              className={isSubmitting ? "add-prod-submitting" : "add-prod-btn"}
+              onClick={handleSubmit}
+            >
+              {isSubmitting ? "Submitting..." : "Submit"}
             </button>
             {errMsg ? <span className="errMsg">{errMsg}</span> : null}
 
