@@ -12,17 +12,14 @@ import { UserProfile } from "./UserProfile";
 export function Navbar() {
   return (
     <nav id="nav">
-      <a href="#" id="nav-logo">
+      <NavLink to="/" id="nav-logo">
         BizFlow
-      </a>
+      </NavLink>
 
       <ul id="nav-ul">
         {/* <NavLink
-          className="list-item "
-          style={({ isActive }) =>
-            isActive
-              ? { backgroundColor: "#5c3b23e6", color: "#fff" }
-              : { color: "black" }
+           className={({ isActive }) =>
+            isActive ? "list-item nav-link-active" : "nav-link-inactive"
           }
           to="/"
         >
@@ -31,12 +28,9 @@ export function Navbar() {
           </div>
         </NavLink> */}
         <NavLink
-          style={({ isActive }) =>
-            isActive
-              ? { backgroundColor: "#5c3b23e6", color: "#fff" }
-              : { color: "black" }
+          className={({ isActive }) =>
+            isActive ? "list-item nav-link-active" : "nav-link-inactive"
           }
-          className="list-item"
           to="/"
           // to="/inventory"
         >
@@ -46,12 +40,9 @@ export function Navbar() {
           </div>
         </NavLink>
         <NavLink
-          style={({ isActive }) =>
-            isActive
-              ? { backgroundColor: "#5c3b23e6", color: "#fff !important" }
-              : { color: "black" }
+          className={({ isActive }) =>
+            isActive ? "list-item nav-link-active" : "nav-link-inactive"
           }
-          className="list-item"
           to="/productCatalog"
         >
           <div className="list-item-sub-container">
@@ -60,12 +51,9 @@ export function Navbar() {
           </div>
         </NavLink>
         <NavLink
-          style={({ isActive }) =>
-            isActive
-              ? { backgroundColor: "#5c3b23e6", color: "#fff" }
-              : { color: "black" }
+          className={({ isActive }) =>
+            isActive ? "list-item nav-link-active" : "nav-link-inactive"
           }
-          className="list-item"
           to="/GenerateBill"
         >
           <div className="list-item-sub-container">
@@ -74,12 +62,9 @@ export function Navbar() {
           </div>
         </NavLink>
         <NavLink
-          style={({ isActive }) =>
-            isActive
-              ? { backgroundColor: "#5c3b23e6", color: "#fff" }
-              : { color: "black" }
+          className={({ isActive }) =>
+            isActive ? "list-item nav-link-active" : "nav-link-inactive"
           }
-          className="list-item"
           to="/viewBills"
         >
           <div className="list-item-sub-container">

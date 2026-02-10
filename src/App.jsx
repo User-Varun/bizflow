@@ -1,3 +1,7 @@
+// import { StrictMode, useEffect, useState } from "react";
+import ReactDOM from "react-dom/client";
+import { StrictMode } from "react";
+
 import { createBrowserRouter, Outlet } from "react-router";
 import { RouterProvider } from "react-router/dom";
 
@@ -13,18 +17,6 @@ import { AuthProvider } from "./features/auth/contexts/AuthProvider";
 import { ProtectedRoute } from "./features/auth/components/ProtectedRoute";
 import { Login } from "./features/auth/Login";
 
-function AppLayout() {
-  return (
-    <ProtectedRoute>
-      <Navbar />
-
-      <SearchItemsProvider>
-        <Outlet />
-      </SearchItemsProvider>
-    </ProtectedRoute>
-  );
-}
-
 const router = createBrowserRouter([
   {
     path: "/login",
@@ -32,7 +24,14 @@ const router = createBrowserRouter([
   },
   {
     path: "/",
-    element: <AppLayout />,
+    element: (
+      <ProtectedRoute>
+        <Navbar />
+        <SearchItemsProvider>
+          <Outlet />
+        </SearchItemsProvider>
+      </ProtectedRoute>
+    ),
     children: [
       // { index: true, Component: Dashboard },
       { index: true, Component: Inventory },
@@ -63,12 +62,10 @@ const router = createBrowserRouter([
   },
 ]);
 
-function App() {
-  return (
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <StrictMode>
     <AuthProvider>
       <RouterProvider router={router} />
     </AuthProvider>
-  );
-}
-
-export default App;
+  </StrictMode>,
+);

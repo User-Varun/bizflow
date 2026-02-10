@@ -1,3 +1,4 @@
+import "../../index.css";
 import "../styles/productCatalog.css";
 import { useEffect, useState } from "react";
 import supabase from "../../services/supabaseClient";
@@ -187,7 +188,7 @@ export function ProductCatalog() {
 
         console.log(
           "data uploaded in product catalog successfully",
-          insertedRows
+          insertedRows,
         );
       }
 
@@ -207,7 +208,7 @@ export function ProductCatalog() {
 
   return (
     // add className for CSS fallback blur when modal is open
-    <section id="prodCatalogContainer">
+    <section className="below-navbar-content-container">
       {isOpen && (
         <div className="modal-overlay" onClick={toggleForm}>
           <div
@@ -282,8 +283,8 @@ export function ProductCatalog() {
               {isSubmitting
                 ? "Submitting..."
                 : isEditMode
-                ? "Update Product"
-                : "Submit"}
+                  ? "Update Product"
+                  : "Submit"}
             </button>
             {errMsg ? <span className="errMsg">{errMsg}</span> : null}
 

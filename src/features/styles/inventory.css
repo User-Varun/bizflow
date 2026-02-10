@@ -81,6 +81,7 @@ body {
 
 .inventory {
   max-width: 95vw;
+  max-height: 90vh;
   margin: 0 auto;
   display: flex;
   flex-direction: column;

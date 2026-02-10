@@ -3,33 +3,38 @@ import { createContext } from "react";
 export const BillContext = createContext(null);
 
 export const initialState = {
-  billType: "Credit",
-  sellerName: "",
-  sellerAddress: "",
-  sellerPhoneNo: "",
-  buyerName: "",
-  buyerAddress: "",
-  buyerPhoneNo: "",
+  invoice_type: "stock_out", // credit
+
+  invoice_from: "",
+  address_from: "",
+  phone_from: "",
+
+  invoice_to: "",
+  address_to: "",
+  phone_to: "",
+
   cgst: "2.5",
   sgst: "2.5",
-  billItems: [],
-  // showBill: false,
+
+  invoice_no: "",
+  total_amt : 0,
+  pending_amt: 0,
+  pending_invoice: true,
+
+  invoice_items: [],
+ 
   isSubmitting: false,
-  // invoiceSnapshot: null,
-  // bill_id: null,
 };
 
 export function reducerFn(state, action) {
   switch (action.type) {
     case "SET_FIELDS":
       return { ...state, ...action.payload };
-    case "SET_SNAPSHOT":
-      return { ...state, invoiceSnapshot: action.payload };
     case "UPDATE_BILL_ITEM": {
-      return { ...state, billItems: action.payload.billToUpdate };
+      return { ...state, invoice_items: action.payload.billToUpdate };
     }
     case "ADD_BILL_ITEM": {
-      return { ...state, billItems: action.payload.billToUpdate };
+      return { ...state, invoice_items: action.payload.billToUpdate };
     }
     default:
       return state;

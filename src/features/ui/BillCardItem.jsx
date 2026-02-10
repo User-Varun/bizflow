@@ -19,12 +19,12 @@ export function BillCardItem({ res }) {
 
     if (qty <= 0) return; // nothing to add
 
-    const exits = billState.billItems.find((item) => item.id == id);
+    const exits = billState.invoice_items.find((item) => item.id == id);
 
     if (exits) {
       // update existing item's property
 
-      billToUpdate = billState.billItems.map((item) => {
+      billToUpdate = billState.invoice_items.map((item) => {
         return item.id === id
           ? {
               ...item,
@@ -42,7 +42,7 @@ export function BillCardItem({ res }) {
       // Add new item with selected quantity
 
       billToUpdate = [
-        ...billState.billItems,
+        ...billState.invoice_items,
         {
           ...res,
           item_qty: qty,
@@ -102,11 +102,10 @@ export function BillCardItem({ res }) {
         </div>
 
         <div>
-          <span>Rate </span>
           <input
             ref={rateElRef}
             type="number"
-            placeholder="0"
+            placeholder="Rate"
             value={searchItemsState.rate?.[res.id] ?? ""}
             onChange={(e) =>
               searchItemsDispatch({

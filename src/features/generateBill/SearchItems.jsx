@@ -5,6 +5,7 @@ import supabase from "../../services/supabaseClient";
 import { SearchBar } from "../ui/SearchBar";
 import { BillCardItem } from "../ui/BillCardItem";
 import { useBill } from "./hooks/useBill";
+import { STOCK_OUT } from "../../appConfig";
 
 export function SearchItems() {
   const { state, _dispatch_ } = useBill();
@@ -14,13 +15,13 @@ export function SearchItems() {
 
   const base = useMemo(
     () =>
-      state.billType === "Credit"
+      state.invoice_type === STOCK_OUT
         ? supabase.from("inventory")
         : supabase.from("product_catalog"),
-    [state.billType]
+    [state.invoice_type],
   );
 
-  // Load defaults on mount/billType change
+  // Load defaults on mount/invoice_type change
   useEffect(() => {
     let isActive = true;
 

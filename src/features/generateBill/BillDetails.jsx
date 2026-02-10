@@ -3,66 +3,89 @@ import "../styles/generateBillStyles/billDetails.css";
 import { useBill } from "./hooks/useBill";
 import { ProductCard } from "../ui/ProductCard";
 
+import { STOCK_IN, STOCK_OUT } from "../../appConfig.js";
+import { useEffect, useCallback } from "react";
+
 export function BillDetails({ setShowInvoice, setBillId }) {
   const { state, dispatch } = useBill();
+
+  const calcTotalAmt = useCallback(() => {
+    return state.invoice_items.reduce(
+      (acc, item) => acc + Number(item.rate || 0) * Number(item.item_qty || 0),
+      0,
+    );
+  }, [state.invoice_items]);
+
+  // every time user updates the local invoice_items state, update total_amt,pending_amt
+  useEffect(() => {
+    function f() {
+      const invoice_total = calcTotalAmt();
+
+      dispatch({
+        type: "SET_FIELDS",
+        payload: {
+          total_amt: invoice_total,
+          pending_amt: invoice_total,
+        },
+      });
+    }
+
+    f();
+  }, [dispatch, calcTotalAmt, state.invoice_details]);
+
+  // mamaJi data (This data Will come from user Profile in future, when user auth is implemented )
+  const mamaJiDetails = {
+    name: "V.S. Enterprises",
+    address: "667 lig 2nd scheme no. 71",
+    phoneNo: 9229665110,
+  };
 
   async function handleSubmit(e) {
     e.preventDefault();
 
     if (state.isSubmitting) return console.log("duplicate"); // prevent double submissions
 
-    if (state.billItems.length <= 0) return;
+    if (state.invoice_items.length <= 0) return;
 
-    // gather mamaJi data (This data Will come from user Profile in future, when user auth is implemented )
-    const mamaJi = {
-      name: "V.S. Enterprises",
-      address: "667 lig 2nd scheme no. 71",
-      phoneNo: 9229665110,
-    };
-
-    // get user-entered party input BEFORE changing billType
-    const partyInput = {
-      name: state.billType === "Credit" ? state.buyerName : state.sellerName,
-      address:
-        state.billType === "Credit" ? state.buyerAddress : state.sellerAddress,
-      phoneNo:
-        state.billType === "Credit" ? state.buyerPhoneNo : state.sellerPhoneNo,
-    };
-
-    // build finalObject WITHOUT depending on dispatched state
+    // fill mama ji's detail based on invoice_type (if user don't change the invoice_type field we have to update the mama ji's details here manually)
+    // the option stock_out will be selecteed in starting, so have to manually update the seller detail to mamaji in case it is empty
     const finalBill = {
-      billType: state.billType,
-      buyerName: state.billType === "Credit" ? partyInput.name : mamaJi.name,
-      buyerAddress:
-        state.billType === "Credit" ? partyInput.address : mamaJi.address,
-      buyerPhoneNo:
-        state.billType === "Credit" ? partyInput.phoneNo : mamaJi.phoneNo,
+      invoice_type: state.invoice_type,
 
-      sellerName: state.billType === "Debit" ? partyInput.name : mamaJi.name,
-      sellerAddress:
-        state.billType === "Debit" ? partyInput.address : mamaJi.address,
-      sellerPhoneNo:
-        state.billType === "Debit" ? partyInput.phoneNo : mamaJi.phoneNo,
+      invoice_to: state.invoice_to,
+      address_to: state.invoice_to,
+      phone_to: state.invoice_to,
+
+      invoice_from: state.invoice_from || mamaJiDetails.name,
+      address_from: state.invoice_from || mamaJiDetails.address,
+      phone_from: state.phone_from || mamaJiDetails.phoneNo,
 
       cgst: state.cgst,
       sgst: state.sgst,
+
+      invoice_no: state.invoice_no,
+      total_amt: state.total_amt,
+      pending_amt: state.pending_amt,
+      pending_invoice: state.pending_invoice,
     };
 
-    // now save with guaranteed correct data
     dispatch({
       type: "SET_FIELDS",
       payload: { isSubmitting: true },
     });
-    try {
-      await saveBillToDB(finalBill);
-    } catch (err) {
-      console.error("Error saving bill:", err);
-    } finally {
-      dispatch({
-        type: "SET_FIELDS",
-        payload: { isSubmitting: false },
-      });
-    }
+
+    console.log(finalBill);
+
+    //   try {
+    //     await saveBillToDB(finalBill);
+    //   } catch (err) {
+    //     console.error("Error saving bill:", err);
+    //   } finally {
+    //     dispatch({
+    //       type: "SET_FIELDS",
+    //       payload: { isSubmitting: false },
+    //     });
+    //   }
   }
 
   async function handleUpdateInventory(data) {
@@ -128,58 +151,57 @@ export function BillDetails({ setShowInvoice, setBillId }) {
     } catch (err) {
       console.error(
         err,
-        "error occured in BillDetails at handleUpdateInventory"
+        "error occured in BillDetails at handleUpdateInventory",
       );
     }
   }
 
-  function handleBillTypeChange(selectedType) {
-    // Auto Filling Mama ji's detail based on bill Type
+  async function handleBillTypeChange(selectedType) {
+    // Job :- Auto Filling Mama ji's detail based on invoice_Type
 
-    dispatch({
+    await dispatch({
       type: "SET_FIELDS",
-      payload: { billType: selectedType },
+      payload: { invoice_type: selectedType },
     });
 
-    const mamaJiDetails = {
-      name: "V.S. Enterprises",
-      address: "667 lig 2nd scheme no. 71",
-      phoneNo: 9229665110,
-    };
+    // Clear all feilds when user change invoice_type
+    await dispatch({
+      type: "SET_FIELDS",
+      payload: {
+        invoice_from: "",
+        address_from: "",
+        phone_from: "",
 
-    // Preserve user-entered data
-    const userData = {
-      name: selectedType === "Credit" ? state.buyerName : state.sellerName,
-      address:
-        selectedType === "Credit" ? state.buyerAddress : state.sellerAddress,
-      phoneNo:
-        selectedType === "Credit" ? state.buyerPhoneNo : state.sellerPhoneNo,
-    };
+        invoice_to: "",
+        address_to: "",
+        phone_to: "",
 
-    if (selectedType === "Credit") {
-      dispatch({
+        invoice_items: [],
+        invoice_no: "",
+        total_amt: 0,
+        pending_amt: 0,
+        pending_invoice: true,
+      },
+    });
+
+    // then apply the value based on the invoice_type
+
+    if (selectedType === STOCK_OUT) {
+      await dispatch({
         type: "SET_FIELDS",
         payload: {
-          sellerName: mamaJiDetails.name,
-          sellerAddress: mamaJiDetails.address,
-          sellerPhoneNo: mamaJiDetails.phoneNo,
-          buyerName: userData.name,
-          buyerAddress: userData.address,
-          buyerPhoneNo: userData.phoneNo,
+          invoice_from: mamaJiDetails.name,
+          address_from: mamaJiDetails.address,
+          phone_from: mamaJiDetails.phoneNo,
         },
       });
-    }
-
-    if (selectedType === "Credit") {
-      dispatch({
+    } else if (selectedType === STOCK_IN) {
+      await dispatch({
         type: "SET_FIELDS",
         payload: {
-          sellerName: mamaJiDetails.name,
-          sellerAddress: mamaJiDetails.address,
-          sellerPhoneNo: mamaJiDetails.phoneNo,
-          buyerName: userData.name,
-          buyerAddress: userData.address,
-          buyerPhoneNo: userData.phoneNo,
+          invoice_to: mamaJiDetails.name,
+          address_to: mamaJiDetails.address,
+          phone_to: mamaJiDetails.phoneNo,
         },
       });
     }
@@ -189,33 +211,42 @@ export function BillDetails({ setShowInvoice, setBillId }) {
     try {
       // Save to Bill + Bill_items table in the database (then updates the inventory table using handleUpdateInventory fn)
       const { data: billDataRes, error: billDataError } = await supabase
-        .from("bills")
+        .from("invoices")
         .insert([
           {
-            bill_type: finalBill.billType,
-            buyer_name: finalBill.buyerName,
-            buyer_address: finalBill.buyerAddress,
-            buyer_phone_no: finalBill.buyerPhoneNo,
+            invoice_type: finalBill.invoice_type,
+            invoice_to: finalBill.invoice_to,
+            address_to: finalBill.address_to,
+            phone_to: finalBill.phone_to,
 
-            seller_name: finalBill.sellerName,
-            seller_address: finalBill.sellerAddress,
-            seller_phone_no: finalBill.sellerPhoneNo,
+            invoice_from: finalBill.invoice_from,
+            address_from: finalBill.address_from,
+            phone_from: finalBill.phone_from,
 
             cgst: finalBill.cgst,
             sgst: finalBill.sgst,
+
+            invoice_no: "0001",
+            total_amt: 100,
+            pending_amt: 100,
+            pending_invoice: true,
           },
         ])
         .select();
 
-      if (billDataError)
-        throw "error while saving in Bill Table (at bill details )";
+      console.log(billDataRes);
 
-      console.log("SuccessFully Saved Bill", billDataRes);
+      if (billDataError) {
+        console.log(billDataError);
+        throw "error while saving in invoices Table (at invoice_items )";
+      }
 
-      const itemsToSave = state.billItems.map((item) => {
+      console.log("SuccessFully Saved invoice", billDataRes);
+
+      const itemsToSave = state.invoice_items.map((item) => {
         console.log(item);
         return {
-          bill_id: billDataRes[0].id,
+          invoice_id: billDataRes[0].id,
           name: item.name,
           brand: item.brand,
           hsn_code: item.hsn_code,
@@ -230,12 +261,12 @@ export function BillDetails({ setShowInvoice, setBillId }) {
       });
 
       const { data: billItemsData, error: BillItemsError } = await supabase
-        .from("bill_items")
+        .from("invoice_items")
         .insert(itemsToSave)
         .select();
 
       if (BillItemsError)
-        throw "Error while Saving in  Bill items Table (at bill details ) ";
+        throw "Error while Saving in  invoice_items Table (at Bill details ) ";
 
       console.log("SuccessFully Saved Bill items ", billItemsData);
 
@@ -249,62 +280,27 @@ export function BillDetails({ setShowInvoice, setBillId }) {
       // Updates the inventory if everything goes right.
       await handleUpdateInventory(billItemsData);
 
-      // // create a snapshot of the saved bill for invoice display
-      // const snapshot = {
-      //   billId: billDataRes[0].id,
-      //   billType: finalBill.billType,
-      //   buyerName: finalBill.buyerName,
-      //   buyerAddress: finalBill.buyerAddress,
-      //   buyerPhoneNo: finalBill.buyerPhoneNo,
-      //   sellerName: finalBill.sellerName,
-      //   sellerAddress: finalBill.sellerAddress,
-      //   sellerPhoneNo: finalBill.sellerPhoneNo,
-      //   cgst: finalBill.cgst,
-      //   sgst: finalBill.sgst,
-      //   billItems: billItemsData,
-      //   billNo: billDataRes[0].bill_no,
-      //   createdAt: billDataRes[0].created_at,
-      // };
-
-      // set the snapshot in context, show invoice, and clear the editable form fields
-      // dispatch({ type: "SET_SNAPSHOT", payload: snapshot });
-      // dispatch({ type: "SET_FIELDS", payload: { showBill: true } });
       // clear form fields so the user gets a fresh form when they come back
       dispatch({
         type: "SET_FIELDS",
         payload: {
-          billType: "Credit",
-          buyerName: "",
-          buyerAddress: "",
-          buyerPhoneNo: "",
-          sellerName: "",
-          sellerAddress: "",
-          sellerPhoneNo: "",
-          cgst: "",
-          sgst: "",
-          billItems: [],
+          invoice_type: STOCK_OUT,
+          invoice_to: "",
+          address_to: "",
+          phone_to: "",
+          invoice_from: "",
+          address_from: "",
+          phone_from: "",
+          cgst: "2.5",
+          sgst: "2.5",
+          invoice_items: [],
+          invoice_no: "",
+          total_amt: 0,
+          pending_amt: 0,
+          pending_invoice: true,
+          isSubmitting: false,
         },
       });
-
-      // commented this coz the invoiceFormat needs the current state to in the bill (will see in future if i can get data from db by passing id, it will be costly so will see)
-      /*
-      setting input fields to their initial values.
-      dispatch({
-        type: "SET_FIELDS",
-        payload: {
-          billType: "Credit",
-          buyerName: "",
-          buyerAddress: "",
-          buyerPhoneNo: "",
-          sellerName: "",
-          sellerAddress: "",
-          sellerPhoneNo: "",
-          cgst: "",
-          sgst: "",
-          billItems: [],
-      },
-      });
-      */
     } catch (err) {
       console.error(err);
     }
@@ -312,7 +308,6 @@ export function BillDetails({ setShowInvoice, setBillId }) {
 
   return (
     <section id="billDetails">
-      <h1>Bill Details</h1>
       <form onSubmit={handleSubmit}>
         <div className="form-sub-container">
           <div className="form-el-container">
@@ -320,15 +315,15 @@ export function BillDetails({ setShowInvoice, setBillId }) {
             <select
               className="formEl"
               id="selectEl"
-              value={state.billType}
+              value={state.invoice_type}
               onChange={(e) => handleBillTypeChange(e.target.value)}
-              name="billType"
+              name="invoice_type"
             >
-              <option className="optionEl" value="Credit">
-                Credit
+              <option className="optionEl" value={STOCK_OUT}>
+                stock_out
               </option>
-              <option className="optionEl" value="Debit">
-                Debit
+              <option className="optionEl" value={STOCK_IN}>
+                stock_in
               </option>
             </select>
           </div>
@@ -341,15 +336,17 @@ export function BillDetails({ setShowInvoice, setBillId }) {
               type="text"
               placeholder="e.g. arihant enterprises"
               value={
-                state.billType === "Credit" ? state.buyerName : state.sellerName
+                state.invoice_type === STOCK_OUT
+                  ? state.invoice_to
+                  : state.invoice_from
               }
               onChange={(e) =>
                 dispatch({
                   type: "SET_FIELDS",
                   payload:
-                    state.billType === "Credit"
-                      ? { buyerName: e.target.value }
-                      : { sellerName: e.target.value },
+                    state.invoice_type === STOCK_OUT
+                      ? { invoice_to: e.target.value }
+                      : { invoice_from: e.target.value },
                 })
               }
             />
@@ -365,17 +362,17 @@ export function BillDetails({ setShowInvoice, setBillId }) {
               type="text"
               placeholder="e.g near navlakha road, indore"
               value={
-                state.billType === "Credit"
-                  ? state.buyerAddress
-                  : state.sellerAddress
+                state.invoice_type === STOCK_OUT
+                  ? state.address_to
+                  : state.address_from
               }
               onChange={(e) =>
                 dispatch({
                   type: "SET_FIELDS",
                   payload:
-                    state.billType === "Credit"
-                      ? { buyerAddress: e.target.value }
-                      : { sellerAddress: e.target.value },
+                    state.invoice_type === STOCK_OUT
+                      ? { address_to: e.target.value }
+                      : { address_from: e.target.value },
                 })
               }
             />
@@ -390,17 +387,17 @@ export function BillDetails({ setShowInvoice, setBillId }) {
               placeholder="e.g. XXXXX98260"
               maxLength={10}
               value={
-                state.billType === "Credit"
-                  ? state.buyerPhoneNo
-                  : state.sellerPhoneNo
+                state.invoice_type === STOCK_OUT
+                  ? state.phone_to
+                  : state.phone_from
               }
               onChange={(e) =>
                 dispatch({
                   type: "SET_FIELDS",
                   payload:
-                    state.billType === "Credit"
-                      ? { buyerPhoneNo: e.target.value }
-                      : { sellerPhoneNo: e.target.value },
+                    state.invoice_type === STOCK_OUT
+                      ? { phone_to: e.target.value }
+                      : { phone_from: e.target.value },
                 })
               }
             />
@@ -408,10 +405,8 @@ export function BillDetails({ setShowInvoice, setBillId }) {
         </div>
 
         <div id="billItemsContainer" className="scroll-hide">
-          {state.billItems && state.billItems.length > 0 ? (
-            state.billItems.map((item) => {
-              console.log(item);
-
+          {state.invoice_items && state.invoice_items.length > 0 ? (
+            state.invoice_items.map((item) => {
               return (
                 <ProductCard res={item} key={item.id} billDetailsCard={true} />
               );
@@ -423,14 +418,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
           )}
         </div>
         <div className="form-sub-container">
-          <p>
-            Your Total : ₹
-            {state.billItems.reduce(
-              (acc, item) =>
-                acc + Number(item.rate || 0) * Number(item.item_qty || 0),
-              0
-            )}
-          </p>
+          <p>Your Total : ₹{state.total_amt}</p>
           <div className="form-sub-container2">
             <div>
               <em>CGST </em>{" "}

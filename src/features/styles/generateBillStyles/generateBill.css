@@ -4,10 +4,10 @@ body {
 
 #generateBillContainer {
   max-width: 95vw;
-  margin: 0.9rem auto;
+  max-height: 90vh;
+  margin: 0 auto;
   display: flex;
-  gap: 1rem;
-  background-color: white;
-  justify-content: center;
-  height: 84.7vh;
+  flex-direction: row;
+  gap: 0.6rem;
+  padding-top: 0.7rem;
 }

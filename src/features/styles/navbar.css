@@ -3,10 +3,10 @@ body {
   padding: 0;
 }
 
-.active {
+/* .active {
   background-color: #5c3b23e6;
   color: #fff !important;
-}
+} */
 
 #nav {
   display: flex;
@@ -37,6 +37,18 @@ body {
   height: 32px;
 }
 
+.nav-link-active {
+  background-color: #5c3b23e6;
+  color: #fff !important;
+}
+.nav-link-active:hover {
+  color: black !important;
+}
+
+.nav-link-inactive {
+  color: black;
+}
+
 #main-container {
   display: flex;
   justify-content: space-between;
@@ -64,6 +76,7 @@ body {
 
 #nav-logo {
   font-size: 2.5rem;
+  cursor: pointer;
 }
 
 .list-item-sub-container {

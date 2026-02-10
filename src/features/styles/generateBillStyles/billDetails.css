@@ -6,6 +6,7 @@
   flex-direction: column;
   gap: 1rem;
   width: 60%;
+  max-height: 85.3vh;
 }
 
 #billDetails h1 {

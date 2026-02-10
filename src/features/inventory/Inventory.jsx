@@ -4,6 +4,7 @@ import { ProductCard } from "../ui/ProductCard";
 import { SearchBar } from "../ui/SearchBar";
 import { PaginationComp } from "../ui/PaginationComp";
 import "../styles/inventory.css";
+import "../../index.css";
 
 export function Inventory() {
   const [inventory, setInventory] = useState([]);
@@ -54,7 +55,7 @@ export function Inventory() {
   }, [searchQuery]);
 
   return (
-    <section className="inventory">
+    <section className="below-navbar-content-container">
       <div id="innerHeader">
         <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
       </div>

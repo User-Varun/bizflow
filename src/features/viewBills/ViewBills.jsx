@@ -5,6 +5,7 @@ import { PaginationComp } from "../ui/PaginationComp";
 import "../styles/viewBills.css";
 import { InvoiceTemplate } from "../ui/InvoiceTemplate";
 import { useState, useEffect } from "react";
+import "../../index.css";
 
 export function ViewBills() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -91,7 +92,7 @@ export function ViewBills() {
   }, [searchQuery, searchFilter]);
 
   return (
-    <section id="viewBillContainer">
+    <section className="below-navbar-content-container">
       <div id="viewBillInnerHeader">
         <SearchBar
           searchQuery={searchQuery}

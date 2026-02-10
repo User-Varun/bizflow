@@ -14,8 +14,8 @@ export function InvoiceTemplate({ id }) {
       try {
         // fetching data
         const { data: billData, error: billErr } = await supabase
-          .from("bills")
-          .select(`*, bill_items(*)`)
+          .from("invoices")
+          .select(`*, invoice_items(*)`)
           .eq("id", id);
 
         if (billErr)
@@ -35,9 +35,9 @@ export function InvoiceTemplate({ id }) {
   }, [id]);
 
   function clacSubTotal() {
-    return data[0].bill_items.reduce(
+    return data[0].invoice_items.reduce(
       (acc, item) => acc + Number(item.rate || 0) * Number(item.item_qty || 0),
-      0
+      0,
     );
   }
 
@@ -205,28 +205,30 @@ export function InvoiceTemplate({ id }) {
         <div className="invoice-border">
           <header className="inv-top">
             <div className="inv-left">
-              <h2 className="company">{data[0].seller_name}</h2>
-              <span className="text-s">{data[0].seller_address}</span>
-              <span className="text-s">Phone: {data[0].seller_phone_no}</span>
+              <h2 className="company">{data[0].invoice_from}</h2>
+              <span className="text-s">{data[0].address_from}</span>
+              <span className="text-s">Phone: {data[0].phone_from}</span>
             </div>
 
             <div className="inv-right">
-              <h2 className="company">{data[0].buyer_name}</h2>
-              <p className="text-s">{data[0].buyer_address}</p>
-              <p className="text-s">Phone: {data[0].buyer_phone_no}</p>
-              <p className="text-s">GST : {data[0].gst}</p>
+              <h2 className="company">{data[0].invoice_to}</h2>
+              <p className="text-s">{data[0].address_to}</p>
+              <p className="text-s">Phone: {data[0].phone_to}</p>
+              {/* <p className="text-s">GST : {data[0].gst}</p> */}
+              <p className="text-s">GST : not defined</p>
             </div>
           </header>
 
           <section className="bill-meta">
             <div className="container-pad">
-              <span>GSTIN: {data[0].gst_in}</span>
+              {/* <span>GSTIN: {data[0].gst_in}</span> */}
+              <span>GSTIN: not defined</span>
             </div>
             <div className="inv-center">
               <h1 className="inv-title">GST INVOICE</h1>
             </div>
             <div className="inv-right-inner container-pad-2">
-              <span>Invoice No. : {data[0].bill_no}</span>
+              <span>Invoice No. : {data[0].invoice_no}</span>
               <span>Date : {formatDate(data[0].created_at)}</span>
             </div>
           </section>
@@ -248,8 +250,8 @@ export function InvoiceTemplate({ id }) {
               </tr>
             </thead>
             <tbody>
-              {data[0].bill_items && data[0].bill_items.length > 0 ? (
-                data[0].bill_items.map((item, idx) => (
+              {data[0].invoice_items && data[0].invoice_items.length > 0 ? (
+                data[0].invoice_items.map((item, idx) => (
                   <tr key={item.id || idx}>
                     <td>{idx + 1}</td>
                     <td>{item.item_qty}</td>
@@ -263,7 +265,7 @@ export function InvoiceTemplate({ id }) {
                     <td>{Number(data[0].cgst)}%</td>
                     <td>
                       {formatAmt(
-                        Number(item.rate || 0) * Number(item.item_qty || 0)
+                        Number(item.rate || 0) * Number(item.item_qty || 0),
                       )}
                     </td>
                   </tr>
@@ -311,7 +313,8 @@ export function InvoiceTemplate({ id }) {
               <div className="inner-right-block">
                 <img
                   className="qr"
-                  src={data[0].qr_url || "/qr.png"}
+                  // src={data[0].qr_url || "/qr.png"}
+                  src={"/qr.png"}
                   alt="QR code"
                 />
                 <span>For V.S. Enterprises</span>

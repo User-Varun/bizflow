@@ -1,1 +1,19 @@
 @import "tailwindcss";
+
+/* Common content container for screens ( below navbar )  
+
+1.inventory 
+2.product catalog
+3. view Bills
+
+*/
+
+.below-navbar-content-container {
+  max-width: 95vw;
+  max-height: 90vh;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-top: 0.7rem;
+}
