@@ -1,37 +1,23 @@
-import supabase from "../../services/supabaseClient";
-import "../styles/generateBillStyles/billDetails.css";
+import "../../styles/generateBillStyles/billDetails.css";
 import { useBill } from "./hooks/useBill";
-import { ProductCard } from "../ui/ProductCard";
-
-import { STOCK_IN, STOCK_OUT } from "../../appConfig.js";
-import { useEffect, useCallback } from "react";
+import { ProductCard } from "../../ui/ProductCard.jsx";
+import { useMemo } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { requestJSON } from "../../utils/requestJSON";
+const STOCK_IN = import.meta.env.VITE_STOCK_IN;
+const STOCK_OUT = import.meta.env.VITE_STOCK_OUT;
+const baseUrl = import.meta.env.VITE_API_URL;
 
 export function BillDetails({ setShowInvoice, setBillId }) {
   const { state, dispatch } = useBill();
+  const queryClient = useQueryClient();
 
-  const calcTotalAmt = useCallback(() => {
+  const totalAmount = useMemo(() => {
     return state.invoice_items.reduce(
       (acc, item) => acc + Number(item.rate || 0) * Number(item.item_qty || 0),
       0,
     );
   }, [state.invoice_items]);
-
-  // every time user updates the local invoice_items state, update total_amt,pending_amt
-  useEffect(() => {
-    function f() {
-      const invoice_total = calcTotalAmt();
-
-      dispatch({
-        type: "SET_FIELDS",
-        payload: {
-          total_amt: invoice_total,
-          pending_amt: invoice_total,
-        },
-      });
-    }
-
-    f();
-  }, [dispatch, calcTotalAmt, state.invoice_details]);
 
   // mamaJi data (This data Will come from user Profile in future, when user auth is implemented )
   const mamaJiDetails = {
@@ -40,120 +26,116 @@ export function BillDetails({ setShowInvoice, setBillId }) {
     phoneNo: 9229665110,
   };
 
-  async function handleSubmit(e) {
+  const generateInvoiceMutation = useMutation({
+    mutationFn: (payload) =>
+      requestJSON(`${baseUrl}/generateInvoice`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: (response) => {
+      const generatedInvoiceId = response?.result?.invoiceRes?.id;
+      if (!generatedInvoiceId)
+        throw new Error("Invoice created but id missing");
+
+      setBillId(generatedInvoiceId);
+      setShowInvoice(true);
+
+      dispatch({
+        type: "SET_FIELDS",
+        payload: {
+          invoice_type: STOCK_OUT,
+          invoice_to: "",
+          address_to: "",
+          phone_to: "",
+          invoice_from: mamaJiDetails.name,
+          address_from: mamaJiDetails.address,
+          phone_from: mamaJiDetails.phoneNo,
+          cgst: "2.5",
+          sgst: "2.5",
+          invoice_items: [],
+          invoice_no: "",
+          total_amt: 0,
+          pending_amt: 0,
+          pending_invoice: true,
+        },
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["viewInvoices"] });
+    },
+    onError: (err) => {
+      console.error("Error saving bill:", err);
+    },
+  });
+
+  function handleSubmit(e) {
     e.preventDefault();
 
-    if (state.isSubmitting) return console.log("duplicate"); // prevent double submissions
+    if (generateInvoiceMutation.isPending) return;
 
     if (state.invoice_items.length <= 0) return;
 
-    // fill mama ji's detail based on invoice_type (if user don't change the invoice_type field we have to update the mama ji's details here manually)
-    // the option stock_out will be selecteed in starting, so have to manually update the seller detail to mamaji in case it is empty
-    const finalBill = {
-      invoice_type: state.invoice_type,
+    const invoiceDetails =
+      state.invoice_type === STOCK_OUT
+        ? {
+            invoice_type: STOCK_OUT,
+            invoice_to: state.invoice_to,
+            address_to: state.address_to,
+            phone_to: state.phone_to,
+          }
+        : {
+            invoice_type: STOCK_IN,
+            invoice_from: state.invoice_from,
+            address_from: state.address_from,
+            phone_from: state.phone_from,
+          };
 
-      invoice_to: state.invoice_to,
-      address_to: state.invoice_to,
-      phone_to: state.invoice_to,
+    const invoiceItemsDetails = state.invoice_items.map((item) => ({
+      name: item.name,
+      brand: item.brand,
+      hsn_code: item.hsn_code,
+      unit_name: item.unit_name,
+      unit_qty: Number(item.unit_qty || 0),
+      product_qty: Number(item.item_qty || 0),
+      rate: Number(item.rate || 0),
+      mrp: Number(item.mrp || 0),
+      cgst: Number(state.cgst || 0),
+      sgst: Number(state.sgst || 0),
+      discount: Number(item.discount || 0),
+      product_catalog_id: item.product_catalog_id || item.id || null,
+    }));
 
-      invoice_from: state.invoice_from || mamaJiDetails.name,
-      address_from: state.invoice_from || mamaJiDetails.address,
-      phone_from: state.phone_from || mamaJiDetails.phoneNo,
-
-      cgst: state.cgst,
-      sgst: state.sgst,
-
-      invoice_no: state.invoice_no,
-      total_amt: state.total_amt,
-      pending_amt: state.pending_amt,
-      pending_invoice: state.pending_invoice,
+    const payload = {
+      invoiceDetails,
+      invoiceItemsDetails,
+      paymentDetails: {
+        amount: 0,
+        payment_method: "cash",
+      },
     };
+
+    generateInvoiceMutation.mutate(payload);
+  }
+
+  function handleRemoveBillItem(itemToRemove) {
+    const updatedItems = state.invoice_items.filter((item) => {
+      if (item.id && itemToRemove.id) return item.id !== itemToRemove.id;
+
+      return !(
+        item.name === itemToRemove.name &&
+        item.brand === itemToRemove.brand &&
+        Number(item.unit_qty || 0) === Number(itemToRemove.unit_qty || 0) &&
+        item.unit_name === itemToRemove.unit_name
+      );
+    });
 
     dispatch({
       type: "SET_FIELDS",
-      payload: { isSubmitting: true },
+      payload: {
+        invoice_items: updatedItems,
+      },
     });
-
-    console.log(finalBill);
-
-    //   try {
-    //     await saveBillToDB(finalBill);
-    //   } catch (err) {
-    //     console.error("Error saving bill:", err);
-    //   } finally {
-    //     dispatch({
-    //       type: "SET_FIELDS",
-    //       payload: { isSubmitting: false },
-    //     });
-    //   }
-  }
-
-  async function handleUpdateInventory(data) {
-    try {
-      const hsnCodes = data.map((item) => item.hsn_code);
-
-      const itemsToUpdate = [];
-      const itemsToInsert = [];
-
-      // 1. Fetch existing inventory entries
-      const { data: existingItems, error: fetchError } = await supabase
-        .from("inventory")
-        .select("id , hsn_code , item_qty")
-        .in("hsn_code", hsnCodes);
-
-      if (fetchError) throw fetchError;
-
-      // 2. Catergories data
-      data.forEach((item) => {
-        const match = existingItems.find((i) => i.hsn_code === item.hsn_code);
-
-        if (match) {
-          // the item already exists in the inventory , just update it's quantity
-          itemsToUpdate.push({
-            id: match.id,
-            item_qty: match.item_qty + item.item_qty,
-          });
-        } else {
-          // otherwise create a record in inventory table
-          itemsToInsert.push({
-            name: item.name,
-            brand: item.brand,
-            mrp: item.mrp,
-            item_qty: item.item_qty,
-            hsn_code: item.hsn_code,
-            img_url: item.img_url,
-            unit_name: item.unit_name,
-            unit_qty: item.unit_qty,
-          });
-        }
-      });
-
-      // 3. insert the new inventory records
-      if (itemsToInsert.length > 0) {
-        const { error: insertError } = await supabase
-          .from("inventory")
-          .insert(itemsToInsert);
-
-        if (insertError) throw insertError;
-      }
-
-      // 4. update the existing records
-      for (const item of itemsToUpdate) {
-        const { error: updateError } = await supabase
-          .from("inventory")
-          .update({ item_qty: item.item_qty })
-          .eq("id", item.id);
-
-        if (updateError) throw updateError;
-      }
-
-      console.log("Inventory updated successfully");
-    } catch (err) {
-      console.error(
-        err,
-        "error occured in BillDetails at handleUpdateInventory",
-      );
-    }
   }
 
   async function handleBillTypeChange(selectedType) {
@@ -204,105 +186,6 @@ export function BillDetails({ setShowInvoice, setBillId }) {
           phone_to: mamaJiDetails.phoneNo,
         },
       });
-    }
-  }
-
-  async function saveBillToDB(finalBill) {
-    try {
-      // Save to Bill + Bill_items table in the database (then updates the inventory table using handleUpdateInventory fn)
-      const { data: billDataRes, error: billDataError } = await supabase
-        .from("invoices")
-        .insert([
-          {
-            invoice_type: finalBill.invoice_type,
-            invoice_to: finalBill.invoice_to,
-            address_to: finalBill.address_to,
-            phone_to: finalBill.phone_to,
-
-            invoice_from: finalBill.invoice_from,
-            address_from: finalBill.address_from,
-            phone_from: finalBill.phone_from,
-
-            cgst: finalBill.cgst,
-            sgst: finalBill.sgst,
-
-            invoice_no: "0001",
-            total_amt: 100,
-            pending_amt: 100,
-            pending_invoice: true,
-          },
-        ])
-        .select();
-
-      console.log(billDataRes);
-
-      if (billDataError) {
-        console.log(billDataError);
-        throw "error while saving in invoices Table (at invoice_items )";
-      }
-
-      console.log("SuccessFully Saved invoice", billDataRes);
-
-      const itemsToSave = state.invoice_items.map((item) => {
-        console.log(item);
-        return {
-          invoice_id: billDataRes[0].id,
-          name: item.name,
-          brand: item.brand,
-          hsn_code: item.hsn_code,
-          unit_name: item.unit_name,
-          unit_qty: item.unit_qty,
-          item_qty: item.item_qty,
-          rate: item.rate,
-          mrp: item.mrp,
-          taxable_amount: item.rate * item.item_qty,
-          img_url: item.img_url,
-        };
-      });
-
-      const { data: billItemsData, error: BillItemsError } = await supabase
-        .from("invoice_items")
-        .insert(itemsToSave)
-        .select();
-
-      if (BillItemsError)
-        throw "Error while Saving in  invoice_items Table (at Bill details ) ";
-
-      console.log("SuccessFully Saved Bill items ", billItemsData);
-
-      // save the id the in bill store so invoice template can access it
-      console.log("BILL Details =    ", billDataRes.id, billDataRes[0].id);
-      setBillId(billDataRes[0].id);
-      setShowInvoice(true);
-      // dispatch({ type: "SET_FIELDS", payload: { bill_id: billDataRes[0].id } });
-      // dispatch({ type: "SET_FIELDS", payload: { showBill: true } });
-
-      // Updates the inventory if everything goes right.
-      await handleUpdateInventory(billItemsData);
-
-      // clear form fields so the user gets a fresh form when they come back
-      dispatch({
-        type: "SET_FIELDS",
-        payload: {
-          invoice_type: STOCK_OUT,
-          invoice_to: "",
-          address_to: "",
-          phone_to: "",
-          invoice_from: "",
-          address_from: "",
-          phone_from: "",
-          cgst: "2.5",
-          sgst: "2.5",
-          invoice_items: [],
-          invoice_no: "",
-          total_amt: 0,
-          pending_amt: 0,
-          pending_invoice: true,
-          isSubmitting: false,
-        },
-      });
-    } catch (err) {
-      console.error(err);
     }
   }
 
@@ -408,7 +291,12 @@ export function BillDetails({ setShowInvoice, setBillId }) {
           {state.invoice_items && state.invoice_items.length > 0 ? (
             state.invoice_items.map((item) => {
               return (
-                <ProductCard res={item} key={item.id} billDetailsCard={true} />
+                <ProductCard
+                  res={item}
+                  key={item.id || `${item.name}-${item.brand}`}
+                  billDetailsCard={true}
+                  onRemove={handleRemoveBillItem}
+                />
               );
             })
           ) : (
@@ -418,7 +306,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
           )}
         </div>
         <div className="form-sub-container">
-          <p>Your Total : ₹{state.total_amt}</p>
+          <p>Your Total : ₹{totalAmount}</p>
           <div className="form-sub-container2">
             <div>
               <em>CGST </em>{" "}
@@ -457,10 +345,12 @@ export function BillDetails({ setShowInvoice, setBillId }) {
 
         <button
           type="submit"
-          className={`submitBtn ${state.isSubmitting ? "btn-disabled" : ""}`}
-          disabled={state.isSubmitting}
+          className={`submitBtn ${generateInvoiceMutation.isPending ? "btn-disabled" : ""}`}
+          disabled={generateInvoiceMutation.isPending}
         >
-          {state.isSubmitting ? "Generating..." : "Generate Bill"}
+          {generateInvoiceMutation.isPending
+            ? "Generating..."
+            : "Generate Bill"}
         </button>
       </form>
     </section>

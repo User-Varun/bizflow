@@ -1,0 +1,112 @@
+body {
+  background-color: #f8f7f6;
+  position: relative;
+}
+
+#inventoryContainer {
+  background-color: gainsboro;
+  padding: 1rem;
+  border-radius: 0.4rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 1rem;
+  min-height: 16rem;
+  max-height: min(70vh, 42rem);
+  overflow-y: scroll;
+  justify-items: start;
+  align-items: start;
+}
+
+.inventory-empty {
+  min-height: 16rem;
+  max-height: min(70vh, 42rem);
+  border-radius: 0.4rem;
+  /* background: linear-gradient(135deg, #f7f9fc 0%, #eef1f7 100%);
+   */
+  background-color: gainsboro;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  color: #1f2a44;
+  text-align: center;
+  padding: 1.5rem;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.07);
+}
+
+.inventory-empty svg {
+  width: 140px;
+  height: 140px;
+  fill: #7a8cc4;
+}
+
+.inventory-empty h1 {
+  font-size: 1.4rem;
+  margin: 0;
+}
+
+.inventory-empty p {
+  margin: 0;
+  color: #53607a;
+}
+
+/* Hide scrollbar until hover */
+.scroll-hide {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.scroll-hide::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: transparent;
+}
+
+.scroll-hide::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 8px;
+}
+
+.scroll-hide:hover {
+  scrollbar-color: #b5b5b5 transparent;
+}
+
+.scroll-hide:hover::-webkit-scrollbar-thumb {
+  background: #b5b5b5;
+}
+
+.scroll-hide:hover::-webkit-scrollbar {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.inventory {
+  max-width: 95vw;
+  max-height: 90vh;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-top: 0.7rem;
+}
+
+.container-empty-msg {
+  display: flex;
+  flex-direction: column;
+}
+
+#innerHeader {
+  display: flex;
+  gap: 1rem;
+}
+
+@media (max-width: 900px) {
+  #inventoryContainer {
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    max-height: none;
+  }
+
+  .inventory-empty {
+    max-height: none;
+  }
+}
