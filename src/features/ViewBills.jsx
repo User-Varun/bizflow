@@ -122,19 +122,31 @@ export function ViewBills() {
                 );
               })
             ) : (
-              <h1>No Bills Found!</h1>
+              <div className="product-catalog-empty">
+                <svg viewBox="0 0 64 64" aria-hidden="true">
+                  <path d="M8 18a2 2 0 0 1 2-2h44a2 2 0 0 1 1.73 1l6 10.4a2 2 0 0 1 .27 1v18.6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V28.4a2 2 0 0 1 .27-1L8 17.98V18Zm1.85 2-4.7 8.13H58.9L54.2 20H9.85ZM4 30v16h56V30H4Zm16 4h4v8h-4v-8Zm8 0h4v8h-4v-8Zm8 0h4v8h-4v-8Z" />
+                </svg>
+                <h1>No Bills yet</h1>
+                <p>
+                  {normalizedSearch
+                    ? "No bill matched your search."
+                    : "generate bill to see it appear here."}
+                </p>
+              </div>
             )}
           </section>
-          <PaginationComp
-            page={page}
-            pageSize={pageSize}
-            total={total}
-            onChange={setPage}
-            onPageSizeChange={setPageSize}
-            disabled={isLoading || isFetching}
-            showFirstLast={true}
-            siblingCount={1}
-          />
+          {bills.length > 0 ? (
+            <PaginationComp
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onChange={setPage}
+              onPageSizeChange={setPageSize}
+              disabled={isLoading || isFetching}
+              showFirstLast={true}
+              siblingCount={1}
+            />
+          ) : null}
         </>
       ) : (
         <InvoiceTemplate
