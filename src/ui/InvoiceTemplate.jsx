@@ -187,6 +187,13 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
     return formatted;
   }
 
+  const invoiceType = String(data?.invoice_type || "").toLowerCase();
+  const companyGstin = String(data?.company_gstin || "").trim();
+  const partyGstin = String(data?.other_party_gst || "").trim();
+
+  const gstinValue = invoiceType === "stock_out" ? companyGstin : partyGstin;
+  const gstValue = invoiceType === "stock_out" ? partyGstin : companyGstin;
+
   if (isLoading) {
     return <LoadingSpinner label="Loading invoice..." minHeight="300px" />;
   }
@@ -210,14 +217,14 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
               <p className="text-s">{data.address_to}</p>
               <p className="text-s">Phone: {data.phone_to}</p>
               {/* <p className="text-s">GST : {data[0].gst}</p> */}
-              <p className="text-s">GST : {data.other_party_gst || "-"}</p>
+              <p className="text-s">GST : {gstValue || "-"}</p>
             </div>
           </header>
 
           <section className="bill-meta">
             <div className="container-pad">
               {/* <span>GSTIN: {data[0].gst_in}</span> */}
-              <span>Other Party GSTIN: {data.other_party_gst || "-"}</span>
+              <span>GSTIN: {gstinValue || "-"}</span>
             </div>
             <div className="inv-center">
               <h1 className="inv-title">GST INVOICE</h1>
