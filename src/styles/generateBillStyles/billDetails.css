@@ -128,6 +128,117 @@
   background-color: gray;
 }
 
+.payment-row {
+  align-items: flex-end;
+  gap: 1rem;
+}
+
+.payment-error-msg {
+  margin: 0;
+  color: #b42318;
+  font-weight: 700;
+}
+
+.bill-error-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(21, 24, 34, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 1rem;
+}
+
+.bill-error-modal-content {
+  width: min(94vw, 460px);
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.22);
+  padding: 1.1rem 1rem 1rem;
+  text-align: center;
+}
+
+.bill-error-modal-content h2 {
+  margin: 0;
+  color: #9f1239;
+  font-size: 1.2rem;
+}
+
+.bill-error-modal-content p {
+  margin: 0.8rem 0 1rem;
+  color: #2b3447;
+  line-height: 1.4;
+}
+
+.bill-error-ok-btn {
+  border: none;
+  border-radius: 8px;
+  background: #e11d48;
+  color: #fff;
+  font-weight: 700;
+  padding: 0.55rem 1rem;
+  cursor: pointer;
+}
+
+.bill-success-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 1rem;
+}
+
+.bill-success-modal-content {
+  width: min(94vw, 500px);
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.22);
+  padding: 1.15rem 1rem 1rem;
+  text-align: center;
+}
+
+.bill-success-modal-content h2 {
+  margin: 0;
+  color: #166534;
+  font-size: 1.2rem;
+}
+
+.bill-success-modal-content p {
+  margin: 0.8rem 0 1rem;
+  color: #2b3447;
+  line-height: 1.4;
+}
+
+.bill-success-actions {
+  display: flex;
+  gap: 0.65rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.bill-success-secondary-btn,
+.bill-success-primary-btn {
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  padding: 0.55rem 1rem;
+  cursor: pointer;
+}
+
+.bill-success-secondary-btn {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.bill-success-primary-btn {
+  background: #16a34a;
+  color: #ffffff;
+}
+
 @media (max-width: 980px) {
   #billDetails {
     max-height: none;

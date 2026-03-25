@@ -7,6 +7,7 @@ body {
 
 .invoice-container {
   margin: 0 auto;
+  width: min(100%, 1180px);
   background: #ffffff;
   padding: 18px;
   border-radius: 4px;
@@ -17,6 +18,7 @@ body {
 #invoice-root {
   display: flex;
   justify-content: center;
+  width: 100%;
   background: #ffffff;
 }
 .inv-top {
@@ -53,8 +55,8 @@ body {
   background-color: #d7d7d7;
   font-weight: bold;
   font-family: fangsong;
-  /* padding: 0.5rem 0rem; */
-  padding-bottom: 1rem;
+  text-align: center;
+  padding: 0.55rem 0.3rem;
 }
 .company {
   margin: 0;
@@ -77,15 +79,15 @@ body {
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
+  table-layout: fixed;
 }
 .inv-table th,
 .inv-table td {
-  border-bottom: 2px solid black;
+  border: 1px solid black;
   padding: 8px 6px;
 }
 
 .inv-table td {
-  border-right: 1px solid black;
   text-align: center;
 }
 .prod-name {
@@ -94,10 +96,53 @@ body {
 .inv-table th {
   background-color: white;
   font-weight: 600;
-  border-left: 1px solid gray;
+}
+
+.inv-table th:nth-child(1),
+.inv-table td:nth-child(1) {
+  width: 5%;
+}
+
+.inv-table th:nth-child(2),
+.inv-table td:nth-child(2) {
+  width: 7%;
+}
+
+.inv-table th:nth-child(4),
+.inv-table td:nth-child(4) {
+  width: 8%;
+}
+
+.inv-table th:nth-child(5),
+.inv-table td:nth-child(5),
+.inv-table th:nth-child(6),
+.inv-table td:nth-child(6),
+.inv-table th:nth-child(7),
+.inv-table td:nth-child(7),
+.inv-table th:nth-child(8),
+.inv-table td:nth-child(8),
+.inv-table th:nth-child(9),
+.inv-table td:nth-child(9) {
+  width: 9%;
+  white-space: nowrap;
+}
+
+.inv-table th:nth-child(10),
+.inv-table td:nth-child(10) {
+  width: 12%;
+  white-space: nowrap;
 }
 .prod-col {
-  min-width: 240px;
+  width: 28%;
+  word-break: break-word;
+}
+.discount-cell {
+  font-weight: 700;
+}
+
+.discount-cell span {
+  color: #5b667b;
+  font-weight: 600;
 }
 .total {
   text-align: right;
@@ -124,6 +169,9 @@ body {
   width: 30%;
   border-left: 1px solid black;
   padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 .tot-line {
   display: flex;
@@ -132,8 +180,10 @@ body {
 .tot-line.grand {
   font-weight: 700;
   font-size: 16px;
-  border-top: 2px solid #d3d3d3;
-  margin-top: 1.3rem;
+  border-top: 2px solid black;
+  margin-top: auto;
+  padding-top: 0.45rem;
+  padding-bottom: 0.1rem;
 }
 .in-words {
   font-style: italic;
@@ -180,6 +230,8 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   border-bottom: 2px solid black;
+  align-items: stretch;
+  min-height: 4.8rem;
 }
 
 .subTotalContainer {
@@ -203,7 +255,7 @@ body {
   display: flex;
   flex-direction: column;
   font-size: 0.9rem;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: flex-start;
 }
 
@@ -215,9 +267,9 @@ body {
 }
 
 .container-pad-2 {
-  padding-top: 0.1rem;
+  padding-top: 0;
   padding-left: 0.2rem;
-  padding-bottom: 1rem;
+  padding-bottom: 0.35rem;
 }
 
 .terms-more {
@@ -240,6 +292,15 @@ body {
   text-align: right;
   margin-top: 0.5rem;
 }
+
+.grand-total-footer {
+  border-top: 2px solid black;
+  padding: 0.5rem;
+}
+
+.grand-total-footer .tot-line.grand {
+  margin-top: 0;
+}
 .auth-sig {
   text-decoration-line: underline;
   font-style: italic;
@@ -250,12 +311,33 @@ body {
 .text-s {
   font-size: 0.9rem;
 }
-.download-pdf-btn {
-  background-color: #73da73;
-  color: #473a3a;
-  font-weight: bold;
-  padding: 1rem 2rem;
+.invoice-actions-row {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.invoice-action-btn {
+  border: none;
   border-radius: 0.5rem;
+  font-weight: 700;
+  padding: 0.8rem 1.3rem;
+  cursor: pointer;
+}
+
+.invoice-action-btn-primary {
+  background-color: #73da73;
+  color: #1f2b1f;
+}
+
+.invoice-action-btn-secondary {
+  background-color: #bcc6d8;
+  color: #20283a;
+}
+
+.invoice-action-btn:hover {
+  filter: brightness(0.97);
 }
 
 .invoice-template-container {
@@ -264,8 +346,16 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-items: center;
+  justify-content: flex-start;
   gap: 1.7rem;
-  height: 77vh;
-  background-color: gainsboro;
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+  min-height: 77vh;
+  height: auto;
+  background-color: #d4d4d4;
+}
+.inner-left-block {
+  justify-self: baseline;
 }

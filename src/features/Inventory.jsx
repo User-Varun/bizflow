@@ -3,7 +3,7 @@ import { SearchBar } from "../ui/SearchBar";
 import { PaginationComp } from "../ui/PaginationComp";
 import "../styles/inventory.css";
 import "../index.css";
-import { requestJSON } from "../utils/requestJSON";
+import { requestJSON } from "../styles/utils/requestJSON";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 
 import { useQuery } from "@tanstack/react-query";
@@ -41,7 +41,7 @@ export function Inventory() {
   if (error) return <p>{error.message}</p>;
 
   return (
-    <section className="below-navbar-content-container">
+    <section className="below-navbar-content-container inventoryShell">
       <div id="innerHeader">
         <SearchBar
           searchQuery={searchQuery}

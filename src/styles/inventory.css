@@ -3,23 +3,32 @@ body {
   position: relative;
 }
 
+.inventoryShell {
+  height: calc(100dvh - 10vh - 1rem);
+  min-height: 0;
+  overflow: hidden;
+}
+
 #inventoryContainer {
   background-color: gainsboro;
   padding: 1rem;
   border-radius: 0.4rem;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-content: flex-start;
   gap: 1rem;
-  min-height: 16rem;
-  max-height: min(70vh, 42rem);
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
   overflow-y: scroll;
-  justify-items: start;
-  align-items: start;
+  align-items: flex-start;
 }
 
 .inventory-empty {
-  min-height: 16rem;
-  max-height: min(70vh, 42rem);
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
   border-radius: 0.4rem;
   /* background: linear-gradient(135deg, #f7f9fc 0%, #eef1f7 100%);
    */
@@ -101,12 +110,15 @@ body {
 }
 
 @media (max-width: 900px) {
+  .inventoryShell {
+    height: calc(100dvh - 10vh - 0.9rem);
+  }
+
   #inventoryContainer {
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-    max-height: none;
+    min-height: 0;
   }
 
   .inventory-empty {
-    max-height: none;
+    min-height: 0;
   }
 }

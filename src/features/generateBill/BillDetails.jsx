@@ -1,9 +1,9 @@
 import "../../styles/generateBillStyles/billDetails.css";
 import { useBill } from "./hooks/useBill";
 import { ProductCard } from "../../ui/ProductCard.jsx";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { requestJSON } from "../../utils/requestJSON";
+import { requestJSON } from "../../styles/utils/requestJSON.js";
 const STOCK_IN = import.meta.env.VITE_STOCK_IN;
 const STOCK_OUT = import.meta.env.VITE_STOCK_OUT;
 const baseUrl = import.meta.env.VITE_API_URL;
@@ -11,6 +11,11 @@ const baseUrl = import.meta.env.VITE_API_URL;
 export function BillDetails({ setShowInvoice, setBillId }) {
   const { state, dispatch } = useBill();
   const queryClient = useQueryClient();
+  const [depositedAmount, setDepositedAmount] = useState("0");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [errorModalMessage, setErrorModalMessage] = useState("");
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [createdInvoiceId, setCreatedInvoiceId] = useState(null);
 
   const totalAmount = useMemo(() => {
     return state.invoice_items.reduce(
@@ -19,12 +24,66 @@ export function BillDetails({ setShowInvoice, setBillId }) {
     );
   }, [state.invoice_items]);
 
+  const estimatedBillAmount = useMemo(() => {
+    const cgst = Number(state.cgst || 0);
+    const sgst = Number(state.sgst || 0);
+    const taxPercent = cgst + sgst;
+    const taxAmount = (totalAmount * taxPercent) / 100;
+
+    return Number((totalAmount + taxAmount).toFixed(2));
+  }, [totalAmount, state.cgst, state.sgst]);
+
   // mamaJi data (This data Will come from user Profile in future, when user auth is implemented )
   const mamaJiDetails = {
     name: "V.S. Enterprises",
     address: "667 lig 2nd scheme no. 71",
     phoneNo: 9229665110,
   };
+
+  function resetBillForm() {
+    dispatch({
+      type: "SET_FIELDS",
+      payload: {
+        invoice_type: STOCK_OUT,
+        invoice_to: "",
+        address_to: "",
+        phone_to: "",
+        invoice_from: mamaJiDetails.name,
+        address_from: mamaJiDetails.address,
+        phone_from: mamaJiDetails.phoneNo,
+        cgst: "2.5",
+        sgst: "2.5",
+        invoice_items: [],
+        invoice_no: "",
+        total_amt: 0,
+        pending_amt: 0,
+        pending_invoice: true,
+      },
+    });
+
+    setDepositedAmount("0");
+    setPaymentMethod("cash");
+  }
+
+  function handleCreateAnotherBill() {
+    resetBillForm();
+    setCreatedInvoiceId(null);
+    setShowSuccessModal(false);
+  }
+
+  function handleShowInvoice() {
+    if (!createdInvoiceId) {
+      setShowSuccessModal(false);
+      setErrorModalMessage("Invoice was created but could not be opened.");
+      return;
+    }
+
+    setBillId(createdInvoiceId);
+    setShowSuccessModal(false);
+    setCreatedInvoiceId(null);
+    resetBillForm();
+    setShowInvoice(true);
+  }
 
   const generateInvoiceMutation = useMutation({
     mutationFn: (payload) =>
@@ -37,44 +96,42 @@ export function BillDetails({ setShowInvoice, setBillId }) {
       if (!generatedInvoiceId)
         throw new Error("Invoice created but id missing");
 
-      setBillId(generatedInvoiceId);
-      setShowInvoice(true);
-
-      dispatch({
-        type: "SET_FIELDS",
-        payload: {
-          invoice_type: STOCK_OUT,
-          invoice_to: "",
-          address_to: "",
-          phone_to: "",
-          invoice_from: mamaJiDetails.name,
-          address_from: mamaJiDetails.address,
-          phone_from: mamaJiDetails.phoneNo,
-          cgst: "2.5",
-          sgst: "2.5",
-          invoice_items: [],
-          invoice_no: "",
-          total_amt: 0,
-          pending_amt: 0,
-          pending_invoice: true,
-        },
-      });
+      setCreatedInvoiceId(generatedInvoiceId);
+      setShowSuccessModal(true);
 
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["viewInvoices"] });
     },
     onError: (err) => {
-      console.error("Error saving bill:", err);
+      setErrorModalMessage(err?.message || "Failed to generate bill.");
     },
   });
 
   function handleSubmit(e) {
     e.preventDefault();
+    setErrorModalMessage("");
 
     if (generateInvoiceMutation.isPending) return;
 
-    if (state.invoice_items.length <= 0) return;
+    if (state.invoice_items.length <= 0) {
+      setErrorModalMessage("Please add at least one item before generating.");
+      return;
+    }
+
+    const amount = Number(depositedAmount);
+
+    if (!Number.isFinite(amount) || amount < 0) {
+      setErrorModalMessage("Deposited amount cannot be less than zero.");
+      return;
+    }
+
+    if (amount > estimatedBillAmount) {
+      setErrorModalMessage(
+        "Deposited amount cannot be greater than bill amount.",
+      );
+      return;
+    }
 
     const invoiceDetails =
       state.invoice_type === STOCK_OUT
@@ -91,27 +148,33 @@ export function BillDetails({ setShowInvoice, setBillId }) {
             phone_from: state.phone_from,
           };
 
-    const invoiceItemsDetails = state.invoice_items.map((item) => ({
-      name: item.name,
-      brand: item.brand,
-      hsn_code: item.hsn_code,
-      unit_name: item.unit_name,
-      unit_qty: Number(item.unit_qty || 0),
-      product_qty: Number(item.item_qty || 0),
-      rate: Number(item.rate || 0),
-      mrp: Number(item.mrp || 0),
-      cgst: Number(state.cgst || 0),
-      sgst: Number(state.sgst || 0),
-      discount: Number(item.discount || 0),
-      product_catalog_id: item.product_catalog_id || item.id || null,
-    }));
+    const invoiceItemsDetails = state.invoice_items.map((item) => {
+      // For stock_in, item.id is product_catalog.id.
+      // For stock_out, item.id is inventory.id, so use product_catalog_id only.
+      const mappedProductCatalogId = item.product_catalog_id || null;
+
+      return {
+        name: item.name,
+        brand: item.brand,
+        hsn_code: item.hsn_code,
+        unit_name: item.unit_name,
+        unit_qty: Number(item.unit_qty || 0),
+        product_qty: Number(item.item_qty || 0),
+        rate: Number(item.rate || 0),
+        mrp: Number(item.mrp || 0),
+        cgst: Number(state.cgst || 0),
+        sgst: Number(state.sgst || 0),
+        discount: Number(item.discount || 0),
+        product_catalog_id: mappedProductCatalogId,
+      };
+    });
 
     const payload = {
       invoiceDetails,
       invoiceItemsDetails,
       paymentDetails: {
-        amount: 0,
-        payment_method: "cash",
+        amount,
+        payment_method: paymentMethod,
       },
     };
 
@@ -191,6 +254,61 @@ export function BillDetails({ setShowInvoice, setBillId }) {
 
   return (
     <section id="billDetails">
+      {errorModalMessage ? (
+        <div
+          className="bill-error-modal-overlay"
+          onClick={() => setErrorModalMessage("")}
+        >
+          <div
+            className="bill-error-modal-content"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="bill-error-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="bill-error-title">Unable to Generate Bill</h2>
+            <p>{errorModalMessage}</p>
+            <button
+              type="button"
+              className="bill-error-ok-btn"
+              onClick={() => setErrorModalMessage("")}
+            >
+              Okay
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {showSuccessModal ? (
+        <div className="bill-success-modal-overlay">
+          <div
+            className="bill-success-modal-content"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="bill-success-title"
+          >
+            <h2 id="bill-success-title">Bill Created Successfully</h2>
+            <p>What would you like to do next?</p>
+            <div className="bill-success-actions">
+              <button
+                type="button"
+                className="bill-success-secondary-btn"
+                onClick={handleCreateAnotherBill}
+              >
+                Create Another Bill
+              </button>
+              <button
+                type="button"
+                className="bill-success-primary-btn"
+                onClick={handleShowInvoice}
+              >
+                Show Invoice
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <form onSubmit={handleSubmit}>
         <div className="form-sub-container">
           <div className="form-el-container">
@@ -306,7 +424,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
           )}
         </div>
         <div className="form-sub-container">
-          <p>Your Total : ₹{totalAmount}</p>
+          <p>Your Total : ₹{estimatedBillAmount}</p>
           <div className="form-sub-container2">
             <div>
               <em>CGST </em>{" "}
@@ -340,6 +458,34 @@ export function BillDetails({ setShowInvoice, setBillId }) {
                 }
               />
             </div>
+          </div>
+        </div>
+
+        <div className="form-sub-container payment-row">
+          <div className="form-el-container">
+            <span>Deposited Amount</span>
+            <input
+              className="formEl"
+              type="number"
+              min="0"
+              step="0.01"
+              value={depositedAmount}
+              onChange={(e) => setDepositedAmount(e.target.value)}
+              placeholder="0"
+            />
+          </div>
+
+          <div className="form-el-container">
+            <span>Payment Method</span>
+            <select
+              className="formEl"
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value)}
+            >
+              <option value="cash">cash</option>
+              <option value="online">online</option>
+              <option value="check">check</option>
+            </select>
           </div>
         </div>
 

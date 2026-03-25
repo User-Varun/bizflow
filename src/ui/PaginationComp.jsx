@@ -1,5 +1,5 @@
 import "../styles/paginationComp.css";
-import { getPaginationRange, DOTS } from "../utils/pagination";
+import { getPaginationRange, DOTS } from "../styles/utils/pagination";
 
 export function PaginationComp({
   page = 1,

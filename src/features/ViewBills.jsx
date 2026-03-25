@@ -4,13 +4,14 @@ import { PaginationComp } from "../ui/PaginationComp";
 import "../styles/viewBills.css";
 import { InvoiceTemplate } from "../ui/InvoiceTemplate";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { requestJSON } from "../utils/requestJSON";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { requestJSON } from "../styles/utils/requestJSON";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import "../index.css";
 
 export function ViewBills() {
   const baseUrl = import.meta.env.VITE_API_URL;
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFilter, setSearchFilter] = useState("invoice_number");
   const [id, setId] = useState(null);
@@ -38,6 +39,18 @@ export function ViewBills() {
   const bills = data?.result || [];
   const total = data?.total || 0;
 
+  const payInvoiceMutation = useMutation({
+    mutationFn: ({ id, amount, payment_method }) =>
+      requestJSON(`${baseUrl}/viewInvoices/${id}/pay`, {
+        method: "PATCH",
+        body: JSON.stringify({ amount, payment_method }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["viewInvoices"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+
   function handleSearchChange(value) {
     setSearchQuery(value);
     setPage(1);
@@ -57,25 +70,29 @@ export function ViewBills() {
   }
 
   return (
-    <section className="below-navbar-content-container">
-      <div id="viewBillInnerHeader">
-        <SearchBar
-          searchQuery={searchQuery}
-          setSearchQuery={handleSearchChange}
-          widthInPercent={85}
-        />
-        <div className="viewBillFilter">
-          <select
-            value={searchFilter}
-            onChange={(e) => handleFilterChange(e.target.value)}
-          >
-            <option value="invoice_number">By Invoice No</option>
-            <option value="createdAt">By Date</option>
-            <option value="invoice_to">By Buyer Name</option>
-            <option value="invoice_from">By Seller Name</option>
-          </select>
+    <section
+      className={`below-navbar-content-container ${!showInvoice ? "viewBillsShell" : ""}`}
+    >
+      {!showInvoice && (
+        <div id="viewBillInnerHeader">
+          <SearchBar
+            searchQuery={searchQuery}
+            setSearchQuery={handleSearchChange}
+            widthInPercent={85}
+          />
+          <div className="viewBillFilter">
+            <select
+              value={searchFilter}
+              onChange={(e) => handleFilterChange(e.target.value)}
+            >
+              <option value="invoice_number">By Invoice No</option>
+              <option value="createdAt">By Date</option>
+              <option value="invoice_to">By Buyer Name</option>
+              <option value="invoice_from">By Seller Name</option>
+            </select>
+          </div>
         </div>
-      </div>
+      )}
 
       {!showInvoice ? (
         <>
@@ -90,6 +107,17 @@ export function ViewBills() {
                     key={res.id}
                     setShowInvoice={setShowInvoice}
                     setId={setId}
+                    onPay={({ amount, payment_method }) =>
+                      payInvoiceMutation.mutateAsync({
+                        id: res.id,
+                        amount,
+                        payment_method,
+                      })
+                    }
+                    isPaying={
+                      payInvoiceMutation.isPending &&
+                      payInvoiceMutation.variables?.id === res.id
+                    }
                   />
                 );
               })
@@ -109,7 +137,14 @@ export function ViewBills() {
           />
         </>
       ) : (
-        <InvoiceTemplate id={id} />
+        <InvoiceTemplate
+          id={id}
+          onBack={() => {
+            setShowInvoice(false);
+            setId(null);
+          }}
+          backButtonLabel="Back to All Bills"
+        />
       )}
     </section>
   );

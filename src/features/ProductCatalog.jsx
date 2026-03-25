@@ -5,7 +5,7 @@ import { SearchBar } from "../ui/SearchBar";
 import { ProductCard } from "../ui/ProductCard";
 import { PaginationComp } from "../ui/PaginationComp";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
-import { requestJSON } from "../utils/requestJSON";
+import { requestJSON } from "../styles/utils/requestJSON";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export function ProductCatalog() {
@@ -172,7 +172,7 @@ export function ProductCatalog() {
 
   return (
     <section
-      className={`below-navbar-content-container ${isOpen || productToDelete ? "blurred" : ""}`}
+      className={`below-navbar-content-container productCatalogShell ${isOpen || productToDelete ? "blurred" : ""}`}
     >
       {isOpen && (
         <div className="modal-overlay" onClick={toggleForm}>

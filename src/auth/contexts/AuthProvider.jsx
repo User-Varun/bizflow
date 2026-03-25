@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AuthContext } from "./AuthContext";
-import { requestJSON } from "../../utils/requestJSON";
+import { requestJSON } from "../../styles/utils/requestJSON";
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
@@ -50,6 +50,16 @@ export function AuthProvider({ children }) {
     return payload.data;
   };
 
+  const signUp = async (registrationData) => {
+    const payload = await requestJSON(`${authBaseUrl}/register`, {
+      method: "POST",
+      body: JSON.stringify(registrationData),
+    });
+
+    setSession(payload.data);
+    return payload.data;
+  };
+
   const signOut = async () => {
     await requestJSON(`${authBaseUrl}/logout`, {
       method: "POST",
@@ -62,6 +72,7 @@ export function AuthProvider({ children }) {
     session,
     loading,
     signIn,
+    signUp,
     signOut,
   };
 

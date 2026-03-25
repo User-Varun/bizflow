@@ -17,6 +17,48 @@
   max-width: 420px;
 }
 
+.register-card {
+  max-width: 520px;
+}
+
+.register-container {
+  min-height: 100dvh;
+  padding: 1.2rem;
+}
+
+.register-card-compact {
+  padding: 2rem 2rem 1.6rem;
+  border: none;
+  background: #ffffff;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.14);
+}
+
+.register-card-compact h1 {
+  margin: 0 0 0.25rem 0;
+}
+
+.register-card-compact .login-subtitle {
+  margin: 0 0 1rem 0;
+}
+
+.register-card-compact .form-group {
+  margin-bottom: 1rem;
+}
+
+.register-card-compact .form-group input {
+  padding: 0.62rem 0.72rem;
+  border-radius: 7px;
+}
+
+.register-card-compact .login-button {
+  margin-top: 0.25rem;
+  padding: 0.72rem;
+}
+
+.register-card-compact .auth-switch-text {
+  margin-top: 1rem;
+}
+
 .login-card h1 {
   margin: 0 0 0.5rem 0;
   font-size: 2rem;
@@ -73,7 +115,9 @@
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
   margin-top: 0.5rem;
 }
 
@@ -96,4 +140,74 @@
   margin-bottom: 1.5rem;
   font-size: 0.9rem;
   border-left: 4px solid #c33;
+}
+
+.auth-switch-text {
+  margin: 1rem 0 0;
+  text-align: center;
+  color: #4b5563;
+  font-size: 0.95rem;
+}
+
+.auth-switch-text a {
+  color: #4f46e5;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.auth-switch-text a:hover {
+  text-decoration: underline;
+}
+
+.auth-step-indicator {
+  margin: -0.15rem 0 1.1rem;
+  text-align: center;
+  color: #4f5570;
+  font-size: 0.86rem;
+  font-weight: 600;
+  padding: 0;
+}
+
+.auth-actions-row {
+  display: flex;
+  gap: 0.7rem;
+}
+
+.auth-actions-row .login-button {
+  margin-top: 0;
+}
+
+.auth-secondary-btn {
+  border: none;
+  border-radius: 8px;
+  min-width: 110px;
+  padding: 0.72rem;
+  background: #d9deea;
+  color: #2c3550;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-height: 760px) {
+  .register-container {
+    padding: 0.75rem;
+  }
+
+  .register-card-compact {
+    padding: 1.2rem 1.1rem;
+  }
+
+  .register-card-compact .form-group {
+    margin-bottom: 0.68rem;
+  }
+
+  .register-card-compact .form-group input {
+    padding: 0.56rem 0.66rem;
+  }
+}
+
+.auth-secondary-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }

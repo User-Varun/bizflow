@@ -14,7 +14,14 @@ export function GenerateBill() {
   return (
     <section id="generateBillContainer">
       {showInvoice ? (
-        <InvoiceTemplate id={billId} />
+        <InvoiceTemplate
+          id={billId}
+          onBack={() => {
+            setShowInvoice(false);
+            setBillId(null);
+          }}
+          backButtonLabel="Back to Generate Bill"
+        />
       ) : (
         <>
           <BillDetails setShowInvoice={setShowInvoice} setBillId={setBillId} />

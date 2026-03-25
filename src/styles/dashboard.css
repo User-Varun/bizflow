@@ -1,6 +1,13 @@
+.dashboardShell {
+  height: calc(100dvh - 10vh - 1rem);
+  min-height: 0;
+  overflow: hidden;
+}
+
 .dashboard-shell {
-  min-height: 73.4vh;
-  max-height: 73.4vh;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
   overflow-y: auto;
   background-color: gainsboro;
   border-radius: 0.4rem;
@@ -178,6 +185,10 @@
 }
 
 @media (max-width: 680px) {
+  .dashboardShell {
+    height: calc(100dvh - 10vh - 0.9rem);
+  }
+
   .dashboard-shell {
     border-radius: 0.4rem;
     padding: 0.8rem;
@@ -191,15 +202,4 @@
   .dashboard-card {
     grid-column: span 12;
   }
-}
-
-.below-navbar-content-container {
-  max-width: 95vw;
-  min-height: 86.4vh;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  padding-top: 0.7rem;
-  margin-top: 1rem !important ;
 }

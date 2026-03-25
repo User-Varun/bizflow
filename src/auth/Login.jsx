@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { useAuth } from "./contexts/useAuth";
 import "../styles/login.css";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
@@ -42,9 +42,9 @@ export function Login() {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="tenantSlug">Tenant Code</label>
             <input
               id="tenantSlug"
+              aria-label="Tenant code"
               type="text"
               value={tenantSlug}
               onChange={(e) => setTenantSlug(e.target.value)}
@@ -55,9 +55,9 @@ export function Login() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="email">Email</label>
             <input
               id="email"
+              aria-label="Email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -68,9 +68,9 @@ export function Login() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Password</label>
             <input
               id="password"
+              aria-label="Password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -84,6 +84,10 @@ export function Login() {
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
+
+        <p className="auth-switch-text">
+          New to BizFlow? <Link to="/register">Create account</Link>
+        </p>
       </div>
     </div>
   );

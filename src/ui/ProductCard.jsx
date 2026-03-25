@@ -59,8 +59,8 @@ export function ProductCard({
               </span>
             ) : (
               !prodCat && (
-                <span className="product-compact-chip qty-highlight">
-                  Stock: {stockQty}
+                <span className="product-compact-chip qty-highlight stock-highlight">
+                  Qty: {stockQty}
                 </span>
               )
             )}

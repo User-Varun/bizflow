@@ -6,7 +6,7 @@ import "../../styles/generateBillStyles/searchItems.css";
 import { SearchBar } from "../../ui/SearchBar";
 import { BillCardItem } from "../../ui/BillCardItem";
 import { LoadingSpinner } from "../../ui/LoadingSpinner";
-import { requestJSON } from "../../utils/requestJSON";
+import { requestJSON } from "../../styles/utils/requestJSON";
 import { useBill } from "./hooks/useBill";
 
 const baseUrl = import.meta.env.VITE_API_URL;

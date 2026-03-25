@@ -2,12 +2,12 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import "../styles/invoiceTemplate.css";
 import { useQuery } from "@tanstack/react-query";
-import { requestJSON } from "../utils/requestJSON";
+import { requestJSON } from "../styles/utils/requestJSON";
 import { LoadingSpinner } from "./LoadingSpinner";
 
 const baseUrl = import.meta.env.VITE_API_URL;
 
-export function InvoiceTemplate({ id }) {
+export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["invoice", id],
     queryFn: () =>
@@ -25,6 +25,18 @@ export function InvoiceTemplate({ id }) {
 
   function clacGrandTotal() {
     return Number(data?.grand_total || 0);
+  }
+
+  function calcDiscountTotal() {
+    const items = data?.invoice_items || [];
+
+    return items.reduce((sum, item) => {
+      const baseAmount = Number(item.rate || 0) * Number(item.product_qty || 0);
+      const discountPct = Number(item.discount || 0);
+      const discountAmount = (baseAmount * discountPct) / 100;
+
+      return sum + discountAmount;
+    }, 0);
   }
 
   function formatAmt(n) {
@@ -223,37 +235,43 @@ export function InvoiceTemplate({ id }) {
                 <th>QTY</th>
                 <th>Product</th>
                 <th>HSN</th>
-                <th>MRP</th>
+                <th>MRP </th>
                 <th>RATE</th>
-                <th>Discount</th>
-                <th>SGST</th>
-                <th>CGST</th>
+                <th>Discount %</th>
+                <th>SGST %</th>
+                <th>CGST %</th>
                 <th>Amount</th>
               </tr>
             </thead>
             <tbody>
               {data.invoice_items && data.invoice_items.length > 0 ? (
-                data.invoice_items.map((item, idx) => (
-                  <tr key={item.id || idx}>
-                    <td>{idx + 1}</td>
-                    <td>{item.product_qty}</td>
-                    <td className="prod-col prod-name">{item.name}</td>
-                    <td>{item.hsn_code || "-"}</td>
-                    <td>{item.mrp ?? "-"}</td>
-                    <td>{item.rate ?? "-"}</td>
-                    <td>{Number(item.discount || 0)}%</td>
-                    <td>{Number(item.sgst || 0)}%</td>
-                    <td>{Number(item.cgst || 0)}%</td>
-                    <td>
-                      {formatAmt(
-                        Number(item.rate || 0) * Number(item.product_qty || 0),
-                      )}
-                    </td>
-                  </tr>
-                ))
+                data.invoice_items.map((item, idx) => {
+                  const baseAmount =
+                    Number(item.rate || 0) * Number(item.product_qty || 0);
+                  const discountPct = Number(item.discount || 0);
+                  const discountAmount = (baseAmount * discountPct) / 100;
+                  const lineAmount = baseAmount - discountAmount;
+
+                  return (
+                    <tr key={item.id || idx}>
+                      <td>{idx + 1}</td>
+                      <td>{item.product_qty}</td>
+                      <td className="prod-col prod-name">{item.name}</td>
+                      <td>{item.hsn_code || "-"}</td>
+                      <td>₹{item.mrp ?? "-"}</td>
+                      <td>₹{item.rate ?? "-"}</td>
+                      <td className="discount-cell">
+                        {Number(item.discount || 0)}%
+                      </td>
+                      <td>{Number(item.sgst || 0)}%</td>
+                      <td>{Number(item.cgst || 0)}%</td>
+                      <td>{formatAmt(lineAmount)}</td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
-                  <td colSpan={11} style={{ textAlign: "center" }}>
+                  <td colSpan={10} style={{ textAlign: "center" }}>
                     NO Items available
                   </td>
                 </tr>
@@ -315,22 +333,15 @@ export function InvoiceTemplate({ id }) {
                 <span>CGST PAYABLE</span>
                 <span>{formatAmt(data.cgst_total)}</span>
               </div>
+              <div className="tot-line">
+                <span>DISCOUNT</span>
+                <span>{formatAmt(calcDiscountTotal())}</span>
+              </div>
+
               {/* <div className="tot-line">
-                <span>DIS1</span>
-                <span>0</span>
-              </div>
-              <div className="tot-line">
-                <span>DIS2</span>
-                <span>0</span>
-              </div>
-              <div className="tot-line">
-                <span>TOTAL DIS</span>
-                <span>0</span>
-              </div>
-              <div className="tot-line">
                 <span>CR/DR NOTE</span>
                 <span>0</span>
-              </div> */}
+              </div>  */}
               <div className="tot-line grand">
                 <span>GRAND TOTAL</span>
                 <span>{formatAmt(clacGrandTotal())}</span>
@@ -340,8 +351,23 @@ export function InvoiceTemplate({ id }) {
         </div>
       </div>
 
-      <div className="download-pdf-btn">
-        <button onClick={handleDownloadPDF}>Download this in PDF</button>
+      <div className="invoice-actions-row">
+        {onBack ? (
+          <button
+            type="button"
+            className="invoice-action-btn invoice-action-btn-secondary"
+            onClick={onBack}
+          >
+            {backButtonLabel}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className="invoice-action-btn invoice-action-btn-primary"
+          onClick={handleDownloadPDF}
+        >
+          Download this in PDF
+        </button>
       </div>
     </div>
   ) : (

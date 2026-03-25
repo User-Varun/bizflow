@@ -317,6 +317,15 @@
   border-color: #bad4ff;
 }
 
+.stock-highlight {
+  color: #ffffff;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  border-color: #1d4ed8;
+  box-shadow: 0 5px 12px rgba(37, 99, 235, 0.32);
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
 .compact-card-actions {
   display: flex;
   gap: 0.45rem;
