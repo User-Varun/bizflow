@@ -210,14 +210,14 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
               <p className="text-s">{data.address_to}</p>
               <p className="text-s">Phone: {data.phone_to}</p>
               {/* <p className="text-s">GST : {data[0].gst}</p> */}
-              <p className="text-s">GST : not defined</p>
+              <p className="text-s">GST : {data.other_party_gst || "-"}</p>
             </div>
           </header>
 
           <section className="bill-meta">
             <div className="container-pad">
               {/* <span>GSTIN: {data[0].gst_in}</span> */}
-              <span>GSTIN: not defined</span>
+              <span>Other Party GSTIN: {data.other_party_gst || "-"}</span>
             </div>
             <div className="inv-center">
               <h1 className="inv-title">GST INVOICE</h1>
@@ -235,11 +235,11 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
                 <th>QTY</th>
                 <th>Product</th>
                 <th>HSN</th>
-                <th>MRP </th>
+                <th>MRP</th>
                 <th>RATE</th>
-                <th>Discount %</th>
-                <th>SGST %</th>
-                <th>CGST %</th>
+                <th>Discount</th>
+                <th>SGST</th>
+                <th>CGST</th>
                 <th>Amount</th>
               </tr>
             </thead>

@@ -12,6 +12,7 @@ export const initialState = {
   invoice_to: "",
   address_to: "",
   phone_to: "",
+  other_party_gst: "",
 
   cgst: "2.5",
   sgst: "2.5",

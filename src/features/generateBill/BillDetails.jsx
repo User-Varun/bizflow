@@ -7,6 +7,27 @@ import { requestJSON } from "../../styles/utils/requestJSON.js";
 const STOCK_IN = import.meta.env.VITE_STOCK_IN;
 const STOCK_OUT = import.meta.env.VITE_STOCK_OUT;
 const baseUrl = import.meta.env.VITE_API_URL;
+const DEALER_CACHE_KEY = "bizflow.dealerCache.v1";
+const DEALER_CACHE_LIMIT = 20;
+
+function safeReadDealerCache() {
+  try {
+    const raw = localStorage.getItem(DEALER_CACHE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistDealerCache(cache) {
+  try {
+    localStorage.setItem(DEALER_CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    // Ignore storage failures.
+  }
+}
 
 export function BillDetails({ setShowInvoice, setBillId }) {
   const { state, dispatch } = useBill();
@@ -16,6 +37,9 @@ export function BillDetails({ setShowInvoice, setBillId }) {
   const [errorModalMessage, setErrorModalMessage] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [createdInvoiceId, setCreatedInvoiceId] = useState(null);
+  const [cachedDealers, setCachedDealers] = useState(() =>
+    safeReadDealerCache(),
+  );
 
   const totalAmount = useMemo(() => {
     return state.invoice_items.reduce(
@@ -24,14 +48,23 @@ export function BillDetails({ setShowInvoice, setBillId }) {
     );
   }, [state.invoice_items]);
 
+  const discountAmount = useMemo(() => {
+    return state.invoice_items.reduce((acc, item) => {
+      const baseAmount = Number(item.rate || 0) * Number(item.item_qty || 0);
+      const discountPercent = Number(item.discount || 0);
+
+      return acc + (baseAmount * discountPercent) / 100;
+    }, 0);
+  }, [state.invoice_items]);
+
   const estimatedBillAmount = useMemo(() => {
     const cgst = Number(state.cgst || 0);
     const sgst = Number(state.sgst || 0);
     const taxPercent = cgst + sgst;
     const taxAmount = (totalAmount * taxPercent) / 100;
 
-    return Number((totalAmount + taxAmount).toFixed(2));
-  }, [totalAmount, state.cgst, state.sgst]);
+    return Number((totalAmount + taxAmount - discountAmount).toFixed(2));
+  }, [totalAmount, discountAmount, state.cgst, state.sgst]);
 
   // mamaJi data (This data Will come from user Profile in future, when user auth is implemented )
   const mamaJiDetails = {
@@ -48,6 +81,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
         invoice_to: "",
         address_to: "",
         phone_to: "",
+        other_party_gst: "",
         invoice_from: mamaJiDetails.name,
         address_from: mamaJiDetails.address,
         phone_from: mamaJiDetails.phoneNo,
@@ -66,6 +100,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
   }
 
   function handleCreateAnotherBill() {
+    saveCurrentDealerToCache();
     resetBillForm();
     setCreatedInvoiceId(null);
     setShowSuccessModal(false);
@@ -78,11 +113,75 @@ export function BillDetails({ setShowInvoice, setBillId }) {
       return;
     }
 
+    saveCurrentDealerToCache();
     setBillId(createdInvoiceId);
     setShowSuccessModal(false);
     setCreatedInvoiceId(null);
     resetBillForm();
     setShowInvoice(true);
+  }
+
+  function getCurrentPartyFields() {
+    return state.invoice_type === STOCK_OUT
+      ? {
+          name: String(state.invoice_to || "").trim(),
+          address: String(state.address_to || "").trim(),
+          phone: String(state.phone_to || "").trim(),
+          gst: String(state.other_party_gst || "")
+            .trim()
+            .toUpperCase(),
+        }
+      : {
+          name: String(state.invoice_from || "").trim(),
+          address: String(state.address_from || "").trim(),
+          phone: String(state.phone_from || "").trim(),
+          gst: String(state.other_party_gst || "")
+            .trim()
+            .toUpperCase(),
+        };
+  }
+
+  function saveCurrentDealerToCache() {
+    const party = getCurrentPartyFields();
+    if (!party.name || !party.phone) return;
+
+    const cacheId = `${party.name.toLowerCase()}::${party.phone.replace(/\s+/g, "")}`;
+
+    const next = [
+      {
+        id: cacheId,
+        ...party,
+        updatedAt: Date.now(),
+      },
+      ...cachedDealers.filter((dealer) => dealer.id !== cacheId),
+    ].slice(0, DEALER_CACHE_LIMIT);
+
+    setCachedDealers(next);
+    persistDealerCache(next);
+  }
+
+  function handleSelectCachedDealer(selectedId) {
+    if (!selectedId) return;
+    const selected = cachedDealers.find((dealer) => dealer.id === selectedId);
+    if (!selected) return;
+
+    dispatch({
+      type: "SET_FIELDS",
+      payload:
+        state.invoice_type === STOCK_OUT
+          ? {
+              invoice_to: selected.name || "",
+              address_to: selected.address || "",
+              phone_to: selected.phone || "",
+              other_party_gst: selected.gst || "",
+            }
+          : {
+              invoice_from: selected.name || "",
+              address_from: selected.address || "",
+              phone_from: selected.phone || "",
+              other_party_gst: selected.gst || "",
+            },
+    });
   }
 
   const generateInvoiceMutation = useMutation({
@@ -140,12 +239,14 @@ export function BillDetails({ setShowInvoice, setBillId }) {
             invoice_to: state.invoice_to,
             address_to: state.address_to,
             phone_to: state.phone_to,
+            other_party_gst: state.other_party_gst,
           }
         : {
             invoice_type: STOCK_IN,
             invoice_from: state.invoice_from,
             address_from: state.address_from,
             phone_from: state.phone_from,
+            other_party_gst: state.other_party_gst,
           };
 
     const invoiceItemsDetails = state.invoice_items.map((item) => {
@@ -220,6 +321,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
         invoice_to: "",
         address_to: "",
         phone_to: "",
+        other_party_gst: "",
 
         invoice_items: [],
         invoice_no: "",
@@ -402,6 +504,50 @@ export function BillDetails({ setShowInvoice, setBillId }) {
                 })
               }
             />
+          </div>
+        </div>
+
+        <div className="form-sub-container party-gst-row">
+          <div className="form-el-container">
+            <span>Party GST No.</span>
+            <input
+              className="formEl"
+              required
+              type="text"
+              placeholder="e.g. 27ABCDE1234F1Z5"
+              value={state.other_party_gst || ""}
+              onChange={(e) =>
+                dispatch({
+                  type: "SET_FIELDS",
+                  payload: { other_party_gst: e.target.value.toUpperCase() },
+                })
+              }
+            />
+          </div>
+
+          <div className="form-el-container">
+            <span>Cached Dealers</span>
+            <div className="cache-dealer-controls">
+              <select
+                className="formEl"
+                defaultValue=""
+                onChange={(e) => handleSelectCachedDealer(e.target.value)}
+              >
+                <option value="">Select dealer</option>
+                {cachedDealers.map((dealer) => (
+                  <option key={dealer.id} value={dealer.id}>
+                    {dealer.name} ({dealer.phone})
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="cache-dealer-btn"
+                onClick={saveCurrentDealerToCache}
+              >
+                Save Dealer
+              </button>
+            </div>
           </div>
         </div>
 

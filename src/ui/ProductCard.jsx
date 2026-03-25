@@ -64,6 +64,11 @@ export function ProductCard({
                 </span>
               )
             )}
+            {billDetailsCard ? (
+              <span className="product-compact-chip">
+                Disc: {Number(res?.discount || 0)}%
+              </span>
+            ) : null}
             <span className="product-compact-chip">HSN: {res.hsn_code}</span>
           </div>
 

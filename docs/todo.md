@@ -7,6 +7,10 @@
 
 - field to add discount on individual product or overall bill
 
+- make other_party_gst field set to (not null) in bakcend
+
+- make caching the delaer feature
+
 ### Task done
 
 - register page , same as login

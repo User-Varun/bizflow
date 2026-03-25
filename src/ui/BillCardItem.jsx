@@ -5,6 +5,7 @@ import "../styles/productCard.css";
 
 export function BillCardItem({ res }) {
   const rateElRef = useRef(null);
+  const discountElRef = useRef(null);
 
   const { state: searchItemsState, dispatch: searchItemsDispatch } =
     useSearchItems();
@@ -16,6 +17,10 @@ export function BillCardItem({ res }) {
     let billToUpdate;
     const id = e.target.dataset.id; // get will get data attribute named "data-id"
     const qty = searchItemsState.quantities?.[id] || 0;
+    const discountInput = Number(searchItemsState.discount?.[id] ?? 0);
+    const safeDiscount = Number.isFinite(discountInput)
+      ? Math.max(0, Math.min(100, discountInput))
+      : 0;
 
     if (qty <= 0) return; // nothing to add
 
@@ -30,6 +35,7 @@ export function BillCardItem({ res }) {
               ...item,
               item_qty: (item.item_qty || 0) + qty,
               rate: Number(searchItemsState.rate[id]),
+              discount: safeDiscount,
             }
           : item;
       });
@@ -47,6 +53,7 @@ export function BillCardItem({ res }) {
           ...res,
           item_qty: qty,
           rate: Number(searchItemsState.rate[id]),
+          discount: safeDiscount,
         },
       ];
 
@@ -59,6 +66,7 @@ export function BillCardItem({ res }) {
     // reset the selected qty for this product only
     searchItemsDispatch({ type: "RESET_QTY", payload: { id: res.id } });
     searchItemsDispatch({ type: "RESET_RATE", payload: { id: res.id } });
+    searchItemsDispatch({ type: "RESET_DISCOUNT", payload: { id: res.id } });
   }
 
   return (
@@ -66,14 +74,16 @@ export function BillCardItem({ res }) {
       <div className="bill-item-top-row">
         <div className="bill-item-name-wrap">
           <span className="bill-item-name">{res.name}</span>
-          <span className="bill-item-brand">{res.brand}</span>
         </div>
         <span className="bill-item-price">₹{res.mrp}</span>
       </div>
 
-      <span className="bill-item-unit">
-        {res.unit_qty} per {res.unit_name}
-      </span>
+      <div className="bill-item-meta-row">
+        <span className="bill-item-brand">{res.brand}</span>
+        <span className="bill-item-unit-pill">
+          {res.unit_qty} {res.unit_name}
+        </span>
+      </div>
 
       <div className="cardSubContainer">
         <div className="itemCounterContainer">
@@ -104,7 +114,7 @@ export function BillCardItem({ res }) {
           </button>
         </div>
 
-        <div>
+        <div className="bill-price-controls">
           <input
             ref={rateElRef}
             type="number"
@@ -120,6 +130,26 @@ export function BillCardItem({ res }) {
               if (rateElRef.current) rateElRef.current.blur(); // Remove focus from the input
             }}
             className="rate-input"
+          />
+
+          <input
+            ref={discountElRef}
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            placeholder="Disc %"
+            value={searchItemsState.discount?.[res.id] ?? ""}
+            onChange={(e) =>
+              searchItemsDispatch({
+                type: "SET_DISCOUNT",
+                payload: { id: res.id, inputFieldValue: e.target.value },
+              })
+            }
+            onMouseLeave={() => {
+              if (discountElRef.current) discountElRef.current.blur();
+            }}
+            className="rate-input discount-input"
           />
         </div>
       </div>
