@@ -1,0 +1,323 @@
+body {
+  background-color: #f8f7f6;
+  position: relative;
+}
+
+.productCatalogShell {
+  height: calc(100dvh - 10vh - 1rem);
+  min-height: 0;
+  overflow: hidden;
+}
+
+#page-description {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+#prodCatalogContainer {
+  max-width: 95vw;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding-top: 0.6rem;
+}
+#heading {
+  font-size: 1.9rem;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: bold;
+}
+
+#search {
+  border: 1px solid gray;
+  padding: 0.3rem;
+  display: flex;
+  gap: 0.3rem;
+}
+
+#filter {
+  border: 1px solid gray;
+  padding: 0.3rem;
+}
+
+#input {
+  width: 20vw;
+}
+#searchAndFilter {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+#productCatalogContainer {
+  background-color: gainsboro;
+  padding: 1rem;
+  border-radius: 0.4rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-content: flex-start;
+  gap: 1rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow-y: scroll;
+  align-items: flex-start;
+}
+
+.product-catalog-empty {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  border-radius: 0.4rem;
+  /* background: linear-gradient(135deg, #f7f9fc 0%, #eef1f7 100%); */
+  background-color: gainsboro;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  color: #1f2a44;
+  text-align: center;
+  padding: 1.5rem;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.07);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.product-catalog-empty svg {
+  width: 140px;
+  height: 140px;
+  fill: #7a8cc4;
+}
+
+.product-catalog-empty h1 {
+  font-size: 1.4rem;
+  margin: 0;
+}
+
+.product-catalog-empty p {
+  margin: 0;
+  color: #53607a;
+}
+
+#card {
+  background-color: rgb(63, 62, 62);
+  color: white;
+  border-radius: 0.4rem;
+  padding: 1rem;
+}
+
+/* full-screen overlay that uses backdrop-filter to blur content behind it (modern browsers) */
+.modal-overlay {
+  position: fixed;
+  inset: 0; /* top:0; right:0; bottom:0; left:0; */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  /* semi-transparent so backdrop-filter affects what's behind */
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px); /* Safari */
+  z-index: 1000;
+  padding: 2rem;
+}
+
+/* modal window stays sharp above the blurred backdrop */
+.modal-content {
+  background: rgba(255, 255, 255, 0.98);
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  max-width: 720px;
+  width: 100%;
+  position: relative;
+  z-index: 1001;
+}
+
+/* close button */
+.modal-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  border: none;
+  background: transparent;
+  font-size: 2.45rem;
+  cursor: pointer;
+  line-height: 1;
+  background-color: red;
+  color: white;
+  padding: 0.1rem 0.6rem;
+  border-radius: 2.1rem;
+}
+
+/* Ensure modal content remains interactive */
+#container.blurred .modal-overlay,
+#container.blurred .modal-overlay * {
+  pointer-events: auto;
+}
+
+.prodCBtn {
+  color: white !important;
+  padding: 1rem 2rem;
+  border-radius: 0.6rem;
+  cursor: pointer;
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 180px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+#innerHeader {
+  display: flex;
+  gap: 1rem;
+}
+
+@media (max-width: 900px) {
+  .productCatalogShell {
+    height: calc(100dvh - 10vh - 0.9rem);
+  }
+
+  #productCatalogContainer {
+    min-height: 0;
+  }
+
+  .product-catalog-empty {
+    min-height: 0;
+  }
+
+  #innerHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .prodCBtn {
+    width: 100%;
+  }
+}
+
+.modal-heading {
+  font-size: 2.2rem;
+  font-weight: bold;
+  font-family: sans-serif;
+  text-align: center;
+}
+
+.delete-confirm-modal {
+  max-width: 520px;
+}
+
+.delete-heading {
+  font-size: 1.9rem;
+  margin: 0;
+}
+
+.delete-warning-text {
+  margin: 1rem 0 1.5rem;
+  text-align: center;
+  color: #2f3440;
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.delete-confirm-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.delete-cancel-btn,
+.delete-confirm-btn {
+  flex: 1;
+  border: none;
+  border-radius: 0.45rem;
+  padding: 0.7rem 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.delete-cancel-btn {
+  background-color: #e8ebf0;
+  color: #283142;
+}
+
+.delete-confirm-btn {
+  background-color: #d53535;
+  color: #ffffff;
+}
+
+.delete-cancel-btn:disabled,
+.delete-confirm-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.container-addProd {
+  display: flex;
+  gap: 1rem;
+  flex-direction: column;
+  margin: 1rem 0rem;
+}
+
+.container-addProd input {
+  background-color: #e3e3e3;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.4rem;
+}
+
+.add-prod-btn {
+  padding: 0.5rem 1.5rem;
+  background-color: #59c759;
+  color: white;
+  font-weight: bold;
+  border-radius: 0.3rem;
+  width: 100%;
+}
+
+.add-prod-img {
+  background-color: rgb(170, 170, 170);
+}
+
+.errMsg {
+  display: flex;
+  justify-self: center;
+}
+
+/* Hide scrollbar until hover */
+.scroll-hide {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.scroll-hide::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: transparent;
+}
+
+.scroll-hide::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 8px;
+}
+
+.scroll-hide:hover {
+  scrollbar-color: #b5b5b5 transparent;
+}
+
+.scroll-hide:hover::-webkit-scrollbar-thumb {
+  background: #b5b5b5;
+}
+
+.scroll-hide:hover::-webkit-scrollbar {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.add-prod-submitting {
+  background-color: gray;
+  padding: 0.5rem 1.5rem;
+  background-color: #59c759;
+  color: white;
+  font-weight: bold;
+  border-radius: 0.3rem;
+  width: 100%;
+}

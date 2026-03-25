@@ -1,318 +1,416 @@
-import supabase from "../../services/supabaseClient";
-import "../styles/generateBillStyles/billDetails.css";
+import "../../styles/generateBillStyles/billDetails.css";
 import { useBill } from "./hooks/useBill";
-import { ProductCard } from "../ui/ProductCard";
+import { ProductCard } from "../../ui/ProductCard.jsx";
+import { useMemo, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { requestJSON } from "../../styles/utils/requestJSON.js";
+const STOCK_IN = import.meta.env.VITE_STOCK_IN;
+const STOCK_OUT = import.meta.env.VITE_STOCK_OUT;
+const baseUrl = import.meta.env.VITE_API_URL;
+const DEALER_CACHE_KEY = "bizflow.dealerCache.v1";
+const DEALER_CACHE_LIMIT = 20;
+
+function safeReadDealerCache() {
+  try {
+    const raw = localStorage.getItem(DEALER_CACHE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistDealerCache(cache) {
+  try {
+    localStorage.setItem(DEALER_CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    // Ignore storage failures.
+  }
+}
 
 export function BillDetails({ setShowInvoice, setBillId }) {
   const { state, dispatch } = useBill();
+  const queryClient = useQueryClient();
+  const [depositedAmount, setDepositedAmount] = useState("0");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [errorModalMessage, setErrorModalMessage] = useState("");
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [createdInvoiceId, setCreatedInvoiceId] = useState(null);
+  const [cachedDealers, setCachedDealers] = useState(() =>
+    safeReadDealerCache(),
+  );
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  const totalAmount = useMemo(() => {
+    return state.invoice_items.reduce(
+      (acc, item) => acc + Number(item.rate || 0) * Number(item.item_qty || 0),
+      0,
+    );
+  }, [state.invoice_items]);
 
-    if (state.isSubmitting) return console.log("duplicate"); // prevent double submissions
+  const discountAmount = useMemo(() => {
+    return state.invoice_items.reduce((acc, item) => {
+      const baseAmount = Number(item.rate || 0) * Number(item.item_qty || 0);
+      const discountPercent = Number(item.discount || 0);
 
-    if (state.billItems.length <= 0) return;
+      return acc + (baseAmount * discountPercent) / 100;
+    }, 0);
+  }, [state.invoice_items]);
 
-    // gather mamaJi data (This data Will come from user Profile in future, when user auth is implemented )
-    const mamaJi = {
-      name: "V.S. Enterprises",
-      address: "667 lig 2nd scheme no. 71",
-      phoneNo: 9229665110,
-    };
+  const estimatedBillAmount = useMemo(() => {
+    const cgst = Number(state.cgst || 0);
+    const sgst = Number(state.sgst || 0);
+    const taxPercent = cgst + sgst;
+    const taxAmount = (totalAmount * taxPercent) / 100;
 
-    // get user-entered party input BEFORE changing billType
-    const partyInput = {
-      name: state.billType === "Credit" ? state.buyerName : state.sellerName,
-      address:
-        state.billType === "Credit" ? state.buyerAddress : state.sellerAddress,
-      phoneNo:
-        state.billType === "Credit" ? state.buyerPhoneNo : state.sellerPhoneNo,
-    };
+    return Number((totalAmount + taxAmount - discountAmount).toFixed(2));
+  }, [totalAmount, discountAmount, state.cgst, state.sgst]);
 
-    // build finalObject WITHOUT depending on dispatched state
-    const finalBill = {
-      billType: state.billType,
-      buyerName: state.billType === "Credit" ? partyInput.name : mamaJi.name,
-      buyerAddress:
-        state.billType === "Credit" ? partyInput.address : mamaJi.address,
-      buyerPhoneNo:
-        state.billType === "Credit" ? partyInput.phoneNo : mamaJi.phoneNo,
+  // mamaJi data (This data Will come from user Profile in future, when user auth is implemented )
+  const mamaJiDetails = {
+    name: "V.S. Enterprises",
+    address: "667 lig 2nd scheme no. 71",
+    phoneNo: 9229665110,
+  };
 
-      sellerName: state.billType === "Debit" ? partyInput.name : mamaJi.name,
-      sellerAddress:
-        state.billType === "Debit" ? partyInput.address : mamaJi.address,
-      sellerPhoneNo:
-        state.billType === "Debit" ? partyInput.phoneNo : mamaJi.phoneNo,
-
-      cgst: state.cgst,
-      sgst: state.sgst,
-    };
-
-    // now save with guaranteed correct data
+  function resetBillForm() {
     dispatch({
       type: "SET_FIELDS",
-      payload: { isSubmitting: true },
-    });
-    try {
-      await saveBillToDB(finalBill);
-    } catch (err) {
-      console.error("Error saving bill:", err);
-    } finally {
-      dispatch({
-        type: "SET_FIELDS",
-        payload: { isSubmitting: false },
-      });
-    }
-  }
-
-  async function handleUpdateInventory(data) {
-    try {
-      const hsnCodes = data.map((item) => item.hsn_code);
-
-      const itemsToUpdate = [];
-      const itemsToInsert = [];
-
-      // 1. Fetch existing inventory entries
-      const { data: existingItems, error: fetchError } = await supabase
-        .from("inventory")
-        .select("id , hsn_code , item_qty")
-        .in("hsn_code", hsnCodes);
-
-      if (fetchError) throw fetchError;
-
-      // 2. Catergories data
-      data.forEach((item) => {
-        const match = existingItems.find((i) => i.hsn_code === item.hsn_code);
-
-        if (match) {
-          // the item already exists in the inventory , just update it's quantity
-          itemsToUpdate.push({
-            id: match.id,
-            item_qty: match.item_qty + item.item_qty,
-          });
-        } else {
-          // otherwise create a record in inventory table
-          itemsToInsert.push({
-            name: item.name,
-            brand: item.brand,
-            mrp: item.mrp,
-            item_qty: item.item_qty,
-            hsn_code: item.hsn_code,
-            img_url: item.img_url,
-            unit_name: item.unit_name,
-            unit_qty: item.unit_qty,
-          });
-        }
-      });
-
-      // 3. insert the new inventory records
-      if (itemsToInsert.length > 0) {
-        const { error: insertError } = await supabase
-          .from("inventory")
-          .insert(itemsToInsert);
-
-        if (insertError) throw insertError;
-      }
-
-      // 4. update the existing records
-      for (const item of itemsToUpdate) {
-        const { error: updateError } = await supabase
-          .from("inventory")
-          .update({ item_qty: item.item_qty })
-          .eq("id", item.id);
-
-        if (updateError) throw updateError;
-      }
-
-      console.log("Inventory updated successfully");
-    } catch (err) {
-      console.error(
-        err,
-        "error occured in BillDetails at handleUpdateInventory"
-      );
-    }
-  }
-
-  function handleBillTypeChange(selectedType) {
-    // Auto Filling Mama ji's detail based on bill Type
-
-    dispatch({
-      type: "SET_FIELDS",
-      payload: { billType: selectedType },
-    });
-
-    const mamaJiDetails = {
-      name: "V.S. Enterprises",
-      address: "667 lig 2nd scheme no. 71",
-      phoneNo: 9229665110,
-    };
-
-    // Preserve user-entered data
-    const userData = {
-      name: selectedType === "Credit" ? state.buyerName : state.sellerName,
-      address:
-        selectedType === "Credit" ? state.buyerAddress : state.sellerAddress,
-      phoneNo:
-        selectedType === "Credit" ? state.buyerPhoneNo : state.sellerPhoneNo,
-    };
-
-    if (selectedType === "Credit") {
-      dispatch({
-        type: "SET_FIELDS",
-        payload: {
-          sellerName: mamaJiDetails.name,
-          sellerAddress: mamaJiDetails.address,
-          sellerPhoneNo: mamaJiDetails.phoneNo,
-          buyerName: userData.name,
-          buyerAddress: userData.address,
-          buyerPhoneNo: userData.phoneNo,
-        },
-      });
-    }
-
-    if (selectedType === "Credit") {
-      dispatch({
-        type: "SET_FIELDS",
-        payload: {
-          sellerName: mamaJiDetails.name,
-          sellerAddress: mamaJiDetails.address,
-          sellerPhoneNo: mamaJiDetails.phoneNo,
-          buyerName: userData.name,
-          buyerAddress: userData.address,
-          buyerPhoneNo: userData.phoneNo,
-        },
-      });
-    }
-  }
-
-  async function saveBillToDB(finalBill) {
-    try {
-      // Save to Bill + Bill_items table in the database (then updates the inventory table using handleUpdateInventory fn)
-      const { data: billDataRes, error: billDataError } = await supabase
-        .from("bills")
-        .insert([
-          {
-            bill_type: finalBill.billType,
-            buyer_name: finalBill.buyerName,
-            buyer_address: finalBill.buyerAddress,
-            buyer_phone_no: finalBill.buyerPhoneNo,
-
-            seller_name: finalBill.sellerName,
-            seller_address: finalBill.sellerAddress,
-            seller_phone_no: finalBill.sellerPhoneNo,
-
-            cgst: finalBill.cgst,
-            sgst: finalBill.sgst,
-          },
-        ])
-        .select();
-
-      if (billDataError)
-        throw "error while saving in Bill Table (at bill details )";
-
-      console.log("SuccessFully Saved Bill", billDataRes);
-
-      const itemsToSave = state.billItems.map((item) => {
-        console.log(item);
-        return {
-          bill_id: billDataRes[0].id,
-          name: item.name,
-          brand: item.brand,
-          hsn_code: item.hsn_code,
-          unit_name: item.unit_name,
-          unit_qty: item.unit_qty,
-          item_qty: item.item_qty,
-          rate: item.rate,
-          mrp: item.mrp,
-          taxable_amount: item.rate * item.item_qty,
-          img_url: item.img_url,
-        };
-      });
-
-      const { data: billItemsData, error: BillItemsError } = await supabase
-        .from("bill_items")
-        .insert(itemsToSave)
-        .select();
-
-      if (BillItemsError)
-        throw "Error while Saving in  Bill items Table (at bill details ) ";
-
-      console.log("SuccessFully Saved Bill items ", billItemsData);
-
-      // save the id the in bill store so invoice template can access it
-      console.log("BILL Details =    ", billDataRes.id, billDataRes[0].id);
-      setBillId(billDataRes[0].id);
-      setShowInvoice(true);
-      // dispatch({ type: "SET_FIELDS", payload: { bill_id: billDataRes[0].id } });
-      // dispatch({ type: "SET_FIELDS", payload: { showBill: true } });
-
-      // Updates the inventory if everything goes right.
-      await handleUpdateInventory(billItemsData);
-
-      // // create a snapshot of the saved bill for invoice display
-      // const snapshot = {
-      //   billId: billDataRes[0].id,
-      //   billType: finalBill.billType,
-      //   buyerName: finalBill.buyerName,
-      //   buyerAddress: finalBill.buyerAddress,
-      //   buyerPhoneNo: finalBill.buyerPhoneNo,
-      //   sellerName: finalBill.sellerName,
-      //   sellerAddress: finalBill.sellerAddress,
-      //   sellerPhoneNo: finalBill.sellerPhoneNo,
-      //   cgst: finalBill.cgst,
-      //   sgst: finalBill.sgst,
-      //   billItems: billItemsData,
-      //   billNo: billDataRes[0].bill_no,
-      //   createdAt: billDataRes[0].created_at,
-      // };
-
-      // set the snapshot in context, show invoice, and clear the editable form fields
-      // dispatch({ type: "SET_SNAPSHOT", payload: snapshot });
-      // dispatch({ type: "SET_FIELDS", payload: { showBill: true } });
-      // clear form fields so the user gets a fresh form when they come back
-      dispatch({
-        type: "SET_FIELDS",
-        payload: {
-          billType: "Credit",
-          buyerName: "",
-          buyerAddress: "",
-          buyerPhoneNo: "",
-          sellerName: "",
-          sellerAddress: "",
-          sellerPhoneNo: "",
-          cgst: "",
-          sgst: "",
-          billItems: [],
-        },
-      });
-
-      // commented this coz the invoiceFormat needs the current state to in the bill (will see in future if i can get data from db by passing id, it will be costly so will see)
-      /*
-      setting input fields to their initial values.
-      dispatch({
-        type: "SET_FIELDS",
-        payload: {
-          billType: "Credit",
-          buyerName: "",
-          buyerAddress: "",
-          buyerPhoneNo: "",
-          sellerName: "",
-          sellerAddress: "",
-          sellerPhoneNo: "",
-          cgst: "",
-          sgst: "",
-          billItems: [],
+      payload: {
+        invoice_type: STOCK_OUT,
+        invoice_to: "",
+        address_to: "",
+        phone_to: "",
+        other_party_gst: "",
+        invoice_from: mamaJiDetails.name,
+        address_from: mamaJiDetails.address,
+        phone_from: mamaJiDetails.phoneNo,
+        cgst: "2.5",
+        sgst: "2.5",
+        invoice_items: [],
+        invoice_no: "",
+        total_amt: 0,
+        pending_amt: 0,
+        pending_invoice: true,
       },
+    });
+
+    setDepositedAmount("0");
+    setPaymentMethod("cash");
+  }
+
+  function handleCreateAnotherBill() {
+    saveCurrentDealerToCache();
+    resetBillForm();
+    setCreatedInvoiceId(null);
+    setShowSuccessModal(false);
+  }
+
+  function handleShowInvoice() {
+    if (!createdInvoiceId) {
+      setShowSuccessModal(false);
+      setErrorModalMessage("Invoice was created but could not be opened.");
+      return;
+    }
+
+    saveCurrentDealerToCache();
+    setBillId(createdInvoiceId);
+    setShowSuccessModal(false);
+    setCreatedInvoiceId(null);
+    resetBillForm();
+    setShowInvoice(true);
+  }
+
+  function getCurrentPartyFields() {
+    return state.invoice_type === STOCK_OUT
+      ? {
+          name: String(state.invoice_to || "").trim(),
+          address: String(state.address_to || "").trim(),
+          phone: String(state.phone_to || "").trim(),
+          gst: String(state.other_party_gst || "")
+            .trim()
+            .toUpperCase(),
+        }
+      : {
+          name: String(state.invoice_from || "").trim(),
+          address: String(state.address_from || "").trim(),
+          phone: String(state.phone_from || "").trim(),
+          gst: String(state.other_party_gst || "")
+            .trim()
+            .toUpperCase(),
+        };
+  }
+
+  function saveCurrentDealerToCache() {
+    const party = getCurrentPartyFields();
+    if (!party.name || !party.phone) return;
+
+    const cacheId = `${party.name.toLowerCase()}::${party.phone.replace(/\s+/g, "")}`;
+
+    const next = [
+      {
+        id: cacheId,
+        ...party,
+        updatedAt: Date.now(),
+      },
+      ...cachedDealers.filter((dealer) => dealer.id !== cacheId),
+    ].slice(0, DEALER_CACHE_LIMIT);
+
+    setCachedDealers(next);
+    persistDealerCache(next);
+  }
+
+  function handleSelectCachedDealer(selectedId) {
+    if (!selectedId) return;
+    const selected = cachedDealers.find((dealer) => dealer.id === selectedId);
+    if (!selected) return;
+
+    dispatch({
+      type: "SET_FIELDS",
+      payload:
+        state.invoice_type === STOCK_OUT
+          ? {
+              invoice_to: selected.name || "",
+              address_to: selected.address || "",
+              phone_to: selected.phone || "",
+              other_party_gst: selected.gst || "",
+            }
+          : {
+              invoice_from: selected.name || "",
+              address_from: selected.address || "",
+              phone_from: selected.phone || "",
+              other_party_gst: selected.gst || "",
+            },
+    });
+  }
+
+  const generateInvoiceMutation = useMutation({
+    mutationFn: (payload) =>
+      requestJSON(`${baseUrl}/generateInvoice`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: (response) => {
+      const generatedInvoiceId = response?.result?.invoiceRes?.id;
+      if (!generatedInvoiceId)
+        throw new Error("Invoice created but id missing");
+
+      setCreatedInvoiceId(generatedInvoiceId);
+      setShowSuccessModal(true);
+
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["viewInvoices"] });
+    },
+    onError: (err) => {
+      setErrorModalMessage(err?.message || "Failed to generate bill.");
+    },
+  });
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    setErrorModalMessage("");
+
+    if (generateInvoiceMutation.isPending) return;
+
+    if (state.invoice_items.length <= 0) {
+      setErrorModalMessage("Please add at least one item before generating.");
+      return;
+    }
+
+    const amount = Number(depositedAmount);
+
+    if (!Number.isFinite(amount) || amount < 0) {
+      setErrorModalMessage("Deposited amount cannot be less than zero.");
+      return;
+    }
+
+    if (amount > estimatedBillAmount) {
+      setErrorModalMessage(
+        "Deposited amount cannot be greater than bill amount.",
+      );
+      return;
+    }
+
+    const invoiceDetails =
+      state.invoice_type === STOCK_OUT
+        ? {
+            invoice_type: STOCK_OUT,
+            invoice_to: state.invoice_to,
+            address_to: state.address_to,
+            phone_to: state.phone_to,
+            other_party_gst: state.other_party_gst,
+          }
+        : {
+            invoice_type: STOCK_IN,
+            invoice_from: state.invoice_from,
+            address_from: state.address_from,
+            phone_from: state.phone_from,
+            other_party_gst: state.other_party_gst,
+          };
+
+    const invoiceItemsDetails = state.invoice_items.map((item) => {
+      // For stock_in, item.id is product_catalog.id.
+      // For stock_out, item.id is inventory.id, so use product_catalog_id only.
+      const mappedProductCatalogId = item.product_catalog_id || null;
+
+      return {
+        name: item.name,
+        brand: item.brand,
+        hsn_code: item.hsn_code,
+        unit_name: item.unit_name,
+        unit_qty: Number(item.unit_qty || 0),
+        product_qty: Number(item.item_qty || 0),
+        rate: Number(item.rate || 0),
+        mrp: Number(item.mrp || 0),
+        cgst: Number(state.cgst || 0),
+        sgst: Number(state.sgst || 0),
+        discount: Number(item.discount || 0),
+        product_catalog_id: mappedProductCatalogId,
+      };
+    });
+
+    const payload = {
+      invoiceDetails,
+      invoiceItemsDetails,
+      paymentDetails: {
+        amount,
+        payment_method: paymentMethod,
+      },
+    };
+
+    generateInvoiceMutation.mutate(payload);
+  }
+
+  function handleRemoveBillItem(itemToRemove) {
+    const updatedItems = state.invoice_items.filter((item) => {
+      if (item.id && itemToRemove.id) return item.id !== itemToRemove.id;
+
+      return !(
+        item.name === itemToRemove.name &&
+        item.brand === itemToRemove.brand &&
+        Number(item.unit_qty || 0) === Number(itemToRemove.unit_qty || 0) &&
+        item.unit_name === itemToRemove.unit_name
+      );
+    });
+
+    dispatch({
+      type: "SET_FIELDS",
+      payload: {
+        invoice_items: updatedItems,
+      },
+    });
+  }
+
+  async function handleBillTypeChange(selectedType) {
+    // Job :- Auto Filling Mama ji's detail based on invoice_Type
+
+    await dispatch({
+      type: "SET_FIELDS",
+      payload: { invoice_type: selectedType },
+    });
+
+    // Clear all feilds when user change invoice_type
+    await dispatch({
+      type: "SET_FIELDS",
+      payload: {
+        invoice_from: "",
+        address_from: "",
+        phone_from: "",
+
+        invoice_to: "",
+        address_to: "",
+        phone_to: "",
+        other_party_gst: "",
+
+        invoice_items: [],
+        invoice_no: "",
+        total_amt: 0,
+        pending_amt: 0,
+        pending_invoice: true,
+      },
+    });
+
+    // then apply the value based on the invoice_type
+
+    if (selectedType === STOCK_OUT) {
+      await dispatch({
+        type: "SET_FIELDS",
+        payload: {
+          invoice_from: mamaJiDetails.name,
+          address_from: mamaJiDetails.address,
+          phone_from: mamaJiDetails.phoneNo,
+        },
       });
-      */
-    } catch (err) {
-      console.error(err);
+    } else if (selectedType === STOCK_IN) {
+      await dispatch({
+        type: "SET_FIELDS",
+        payload: {
+          invoice_to: mamaJiDetails.name,
+          address_to: mamaJiDetails.address,
+          phone_to: mamaJiDetails.phoneNo,
+        },
+      });
     }
   }
 
   return (
     <section id="billDetails">
-      <h1>Bill Details</h1>
+      {errorModalMessage ? (
+        <div
+          className="bill-error-modal-overlay"
+          onClick={() => setErrorModalMessage("")}
+        >
+          <div
+            className="bill-error-modal-content"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="bill-error-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="bill-error-title">Unable to Generate Bill</h2>
+            <p>{errorModalMessage}</p>
+            <button
+              type="button"
+              className="bill-error-ok-btn"
+              onClick={() => setErrorModalMessage("")}
+            >
+              Okay
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {showSuccessModal ? (
+        <div className="bill-success-modal-overlay">
+          <div
+            className="bill-success-modal-content"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="bill-success-title"
+          >
+            <h2 id="bill-success-title">Bill Created Successfully</h2>
+            <p>What would you like to do next?</p>
+            <div className="bill-success-actions">
+              <button
+                type="button"
+                className="bill-success-secondary-btn"
+                onClick={handleCreateAnotherBill}
+              >
+                Create Another Bill
+              </button>
+              <button
+                type="button"
+                className="bill-success-primary-btn"
+                onClick={handleShowInvoice}
+              >
+                Show Invoice
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <form onSubmit={handleSubmit}>
         <div className="form-sub-container">
           <div className="form-el-container">
@@ -320,15 +418,15 @@ export function BillDetails({ setShowInvoice, setBillId }) {
             <select
               className="formEl"
               id="selectEl"
-              value={state.billType}
+              value={state.invoice_type}
               onChange={(e) => handleBillTypeChange(e.target.value)}
-              name="billType"
+              name="invoice_type"
             >
-              <option className="optionEl" value="Credit">
-                Credit
+              <option className="optionEl" value={STOCK_OUT}>
+                stock_out
               </option>
-              <option className="optionEl" value="Debit">
-                Debit
+              <option className="optionEl" value={STOCK_IN}>
+                stock_in
               </option>
             </select>
           </div>
@@ -341,15 +439,17 @@ export function BillDetails({ setShowInvoice, setBillId }) {
               type="text"
               placeholder="e.g. arihant enterprises"
               value={
-                state.billType === "Credit" ? state.buyerName : state.sellerName
+                state.invoice_type === STOCK_OUT
+                  ? state.invoice_to
+                  : state.invoice_from
               }
               onChange={(e) =>
                 dispatch({
                   type: "SET_FIELDS",
                   payload:
-                    state.billType === "Credit"
-                      ? { buyerName: e.target.value }
-                      : { sellerName: e.target.value },
+                    state.invoice_type === STOCK_OUT
+                      ? { invoice_to: e.target.value }
+                      : { invoice_from: e.target.value },
                 })
               }
             />
@@ -365,17 +465,17 @@ export function BillDetails({ setShowInvoice, setBillId }) {
               type="text"
               placeholder="e.g near navlakha road, indore"
               value={
-                state.billType === "Credit"
-                  ? state.buyerAddress
-                  : state.sellerAddress
+                state.invoice_type === STOCK_OUT
+                  ? state.address_to
+                  : state.address_from
               }
               onChange={(e) =>
                 dispatch({
                   type: "SET_FIELDS",
                   payload:
-                    state.billType === "Credit"
-                      ? { buyerAddress: e.target.value }
-                      : { sellerAddress: e.target.value },
+                    state.invoice_type === STOCK_OUT
+                      ? { address_to: e.target.value }
+                      : { address_from: e.target.value },
                 })
               }
             />
@@ -390,30 +490,77 @@ export function BillDetails({ setShowInvoice, setBillId }) {
               placeholder="e.g. XXXXX98260"
               maxLength={10}
               value={
-                state.billType === "Credit"
-                  ? state.buyerPhoneNo
-                  : state.sellerPhoneNo
+                state.invoice_type === STOCK_OUT
+                  ? state.phone_to
+                  : state.phone_from
               }
               onChange={(e) =>
                 dispatch({
                   type: "SET_FIELDS",
                   payload:
-                    state.billType === "Credit"
-                      ? { buyerPhoneNo: e.target.value }
-                      : { sellerPhoneNo: e.target.value },
+                    state.invoice_type === STOCK_OUT
+                      ? { phone_to: e.target.value }
+                      : { phone_from: e.target.value },
                 })
               }
             />
           </div>
         </div>
 
-        <div id="billItemsContainer" className="scroll-hide">
-          {state.billItems && state.billItems.length > 0 ? (
-            state.billItems.map((item) => {
-              console.log(item);
+        <div className="form-sub-container party-gst-row">
+          <div className="form-el-container">
+            <span>Party GST No.</span>
+            <input
+              className="formEl"
+              required
+              type="text"
+              placeholder="e.g. 27ABCDE1234F1Z5"
+              value={state.other_party_gst || ""}
+              onChange={(e) =>
+                dispatch({
+                  type: "SET_FIELDS",
+                  payload: { other_party_gst: e.target.value.toUpperCase() },
+                })
+              }
+            />
+          </div>
 
+          <div className="form-el-container">
+            <span>Cached Dealers</span>
+            <div className="cache-dealer-controls">
+              <select
+                className="formEl"
+                defaultValue=""
+                onChange={(e) => handleSelectCachedDealer(e.target.value)}
+              >
+                <option value="">Select dealer</option>
+                {cachedDealers.map((dealer) => (
+                  <option key={dealer.id} value={dealer.id}>
+                    {dealer.name} ({dealer.phone})
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="cache-dealer-btn"
+                onClick={saveCurrentDealerToCache}
+              >
+                Save Dealer
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div id="billItemsContainer" className="scroll-hide">
+          {state.invoice_items && state.invoice_items.length > 0 ? (
+            state.invoice_items.map((item) => {
               return (
-                <ProductCard res={item} key={item.id} billDetailsCard={true} />
+                <ProductCard
+                  res={item}
+                  key={item.id || `${item.name}-${item.brand}`}
+                  billDetailsCard={true}
+                  onRemove={handleRemoveBillItem}
+                />
               );
             })
           ) : (
@@ -423,14 +570,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
           )}
         </div>
         <div className="form-sub-container">
-          <p>
-            Your Total : ₹
-            {state.billItems.reduce(
-              (acc, item) =>
-                acc + Number(item.rate || 0) * Number(item.item_qty || 0),
-              0
-            )}
-          </p>
+          <p>Your Total : ₹{estimatedBillAmount}</p>
           <div className="form-sub-container2">
             <div>
               <em>CGST </em>{" "}
@@ -467,12 +607,42 @@ export function BillDetails({ setShowInvoice, setBillId }) {
           </div>
         </div>
 
+        <div className="form-sub-container payment-row">
+          <div className="form-el-container">
+            <span>Deposited Amount</span>
+            <input
+              className="formEl"
+              type="number"
+              min="0"
+              step="0.01"
+              value={depositedAmount}
+              onChange={(e) => setDepositedAmount(e.target.value)}
+              placeholder="0"
+            />
+          </div>
+
+          <div className="form-el-container">
+            <span>Payment Method</span>
+            <select
+              className="formEl"
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value)}
+            >
+              <option value="cash">cash</option>
+              <option value="online">online</option>
+              <option value="check">check</option>
+            </select>
+          </div>
+        </div>
+
         <button
           type="submit"
-          className={`submitBtn ${state.isSubmitting ? "btn-disabled" : ""}`}
-          disabled={state.isSubmitting}
+          className={`submitBtn ${generateInvoiceMutation.isPending ? "btn-disabled" : ""}`}
+          disabled={generateInvoiceMutation.isPending}
         >
-          {state.isSubmitting ? "Generating..." : "Generate Bill"}
+          {generateInvoiceMutation.isPending
+            ? "Generating..."
+            : "Generate Bill"}
         </button>
       </form>
     </section>

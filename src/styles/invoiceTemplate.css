@@ -1,0 +1,361 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #ffffff; /* avoid gray bleed in captures */
+}
+
+.invoice-container {
+  margin: 0 auto;
+  width: min(100%, 1180px);
+  background: #ffffff;
+  padding: 18px;
+  border-radius: 4px;
+  box-shadow: none; /* disable shadow to prevent gray artifacts in PDF */
+}
+
+/* keep invoice-root predictable when captured by html2canvas */
+#invoice-root {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  background: #ffffff;
+}
+.inv-top {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12rem;
+  align-items: baseline;
+  padding: 0 0.7rem;
+  border-bottom: 2px solid black;
+  padding-bottom: 1rem;
+}
+.inv-left,
+.inv-right {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  color: #333;
+  gap: 0.1rem;
+  align-items: baseline;
+}
+
+.inv-left p,
+.inv-right p,
+.inv-left span,
+.inv-right span {
+  margin: 0;
+}
+.inv-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-left: 1px solid black;
+  border-right: 1px solid black;
+  background-color: #d7d7d7;
+  font-weight: bold;
+  font-family: fangsong;
+  text-align: center;
+  padding: 0.55rem 0.3rem;
+}
+.company {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+.inv-title {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: 2px;
+}
+.details {
+  margin-bottom: 20px;
+}
+.details p {
+  margin: 5px 0;
+  color: #555;
+}
+.inv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  table-layout: fixed;
+}
+.inv-table th,
+.inv-table td {
+  border: 1px solid black;
+  padding: 8px 6px;
+}
+
+.inv-table td {
+  text-align: center;
+}
+.prod-name {
+  text-align: start !important;
+}
+.inv-table th {
+  background-color: white;
+  font-weight: 600;
+}
+
+.inv-table th:nth-child(1),
+.inv-table td:nth-child(1) {
+  width: 5%;
+}
+
+.inv-table th:nth-child(2),
+.inv-table td:nth-child(2) {
+  width: 7%;
+}
+
+.inv-table th:nth-child(4),
+.inv-table td:nth-child(4) {
+  width: 8%;
+}
+
+.inv-table th:nth-child(5),
+.inv-table td:nth-child(5),
+.inv-table th:nth-child(6),
+.inv-table td:nth-child(6),
+.inv-table th:nth-child(7),
+.inv-table td:nth-child(7),
+.inv-table th:nth-child(8),
+.inv-table td:nth-child(8),
+.inv-table th:nth-child(9),
+.inv-table td:nth-child(9) {
+  width: 9%;
+  white-space: nowrap;
+}
+
+.inv-table th:nth-child(10),
+.inv-table td:nth-child(10) {
+  width: 12%;
+  white-space: nowrap;
+}
+.prod-col {
+  width: 28%;
+  word-break: break-word;
+}
+.discount-cell {
+  font-weight: 700;
+}
+
+.discount-cell span {
+  color: #5b667b;
+  font-weight: 600;
+}
+.total {
+  text-align: right;
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+}
+.totals-row {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+.left-block {
+  width: 70%;
+  font-size: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0.5rem 0.8rem;
+  justify-items: center;
+  align-items: start;
+}
+.right-block {
+  width: 30%;
+  border-left: 1px solid black;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.tot-line {
+  display: flex;
+  justify-content: space-between;
+}
+.tot-line.grand {
+  font-weight: 700;
+  font-size: 16px;
+  border-top: 2px solid black;
+  margin-top: auto;
+  padding-top: 0.45rem;
+  padding-bottom: 0.1rem;
+}
+.in-words {
+  font-style: italic;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  font-family: serif;
+}
+.terms {
+  font-size: 11px;
+  color: #444;
+}
+.terms a {
+  font-weight: bold;
+  font-size: 1.2rem;
+  font-style: italic;
+  cursor: pointer;
+  text-decoration-line: underline;
+}
+
+.invoice-border {
+  border: 5px solid black;
+}
+.qr {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  background: #ffffff;
+}
+
+/* small screens */
+@media (max-width: 800px) {
+  .inv-top {
+    grid-template-columns: 1fr;
+  }
+  .right-block {
+    width: 100%;
+  }
+  .prod-col {
+    min-width: 120px;
+  }
+}
+
+.bill-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  border-bottom: 2px solid black;
+  align-items: stretch;
+  min-height: 4.8rem;
+}
+
+.subTotalContainer {
+  display: flex;
+  justify-content: flex-end;
+  border-bottom: 2px solid black;
+  width: 100%;
+}
+
+.inner-stc {
+  width: 30%;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: center;
+  border-left: 1px solid black;
+  padding: 0.5rem;
+}
+
+.inv-right-inner {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+  justify-content: flex-end;
+  align-items: flex-start;
+}
+
+.container-pad {
+  display: flex;
+  align-items: end;
+  padding-left: 0.3rem;
+  padding-bottom: 0.5rem;
+}
+
+.container-pad-2 {
+  padding-top: 0;
+  padding-left: 0.2rem;
+  padding-bottom: 0.35rem;
+}
+
+.terms-more {
+  margin-top: 0.5rem;
+}
+
+.bank {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.inner-right-block {
+  align-self: center;
+}
+
+.inner-middle-down-block {
+  grid-column: 1 / -1;
+  justify-self: stretch;
+  text-align: right;
+  margin-top: 0.5rem;
+}
+
+.grand-total-footer {
+  border-top: 2px solid black;
+  padding: 0.5rem;
+}
+
+.grand-total-footer .tot-line.grand {
+  margin-top: 0;
+}
+.auth-sig {
+  text-decoration-line: underline;
+  font-style: italic;
+  font-weight: bold;
+  font-family: sans-serif;
+}
+
+.text-s {
+  font-size: 0.9rem;
+}
+.invoice-actions-row {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.invoice-action-btn {
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 700;
+  padding: 0.8rem 1.3rem;
+  cursor: pointer;
+}
+
+.invoice-action-btn-primary {
+  background-color: #73da73;
+  color: #1f2b1f;
+}
+
+.invoice-action-btn-secondary {
+  background-color: #bcc6d8;
+  color: #20283a;
+}
+
+.invoice-action-btn:hover {
+  filter: brightness(0.97);
+}
+
+.invoice-template-container {
+  padding: 1rem;
+  border-radius: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1.7rem;
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+  min-height: 77vh;
+  height: auto;
+  background-color: #d4d4d4;
+}
+.inner-left-block {
+  justify-self: baseline;
+}
