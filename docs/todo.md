@@ -5,6 +5,11 @@
 
 - als0 make the certain fields validation (like number should be 10 digit and hsn code is to certain digit and like this)
 
+### inhance dashboard features
+
+open invoice when click dashboard elements
+sort option like yearly or monthly
+
 ### Task done
 
 - register page , same as login
