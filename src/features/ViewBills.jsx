@@ -14,6 +14,7 @@ export function ViewBills() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFilter, setSearchFilter] = useState("invoice_number");
+  const [billTypeFilter, setBillTypeFilter] = useState("all");
   const [id, setId] = useState(null);
   const [showInvoice, setShowInvoice] = useState(false);
   const [page, setPage] = useState(1);
@@ -23,11 +24,17 @@ export function ViewBills() {
   const { data, isLoading, isFetching, error } = useQuery({
     queryKey: [
       "viewInvoices",
-      { page, pageSize, search: normalizedSearch, searchFilter },
+      {
+        page,
+        pageSize,
+        search: normalizedSearch,
+        searchFilter,
+        billTypeFilter,
+      },
     ],
     queryFn: () =>
       requestJSON(
-        `${baseUrl}/viewInvoices?page=${page}&pageSize=${pageSize}&search=${encodeURIComponent(normalizedSearch)}&searchFilter=${encodeURIComponent(searchFilter)}`,
+        `${baseUrl}/viewInvoices?page=${page}&pageSize=${pageSize}&search=${encodeURIComponent(normalizedSearch)}&searchFilter=${encodeURIComponent(searchFilter)}&billType=${encodeURIComponent(billTypeFilter)}`,
         {
           method: "GET",
         },
@@ -92,6 +99,11 @@ export function ViewBills() {
     setPage(1);
   }
 
+  function handleBillTypeFilterChange(value) {
+    setBillTypeFilter(value);
+    setPage(1);
+  }
+
   if (error) {
     return (
       <section className="below-navbar-content-container">
@@ -120,6 +132,16 @@ export function ViewBills() {
               <option value="createdAt">By Date</option>
               <option value="invoice_to">By Buyer Name</option>
               <option value="invoice_from">By Seller Name</option>
+            </select>
+          </div>
+          <div className="viewBillFilter">
+            <select
+              value={billTypeFilter}
+              onChange={(e) => handleBillTypeFilterChange(e.target.value)}
+            >
+              <option value="all">All Bills</option>
+              <option value="stock_in">Stock In</option>
+              <option value="stock_out">Stock Out</option>
             </select>
           </div>
         </div>

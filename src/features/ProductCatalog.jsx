@@ -24,6 +24,7 @@ export function ProductCatalog() {
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
   const [mrp, setMrp] = useState("");
+  const [rate, setRate] = useState("");
   const [hsnCode, setHsnCode] = useState("");
   const [unitName, setUnitName] = useState("pcs");
   const [customUnitName, setCustomUnitName] = useState("");
@@ -113,6 +114,7 @@ export function ProductCatalog() {
     setName("");
     setBrand("");
     setMrp(0);
+    setRate(0);
     setHsnCode("");
     setUnitName("pcs");
     setCustomUnitName("");
@@ -128,6 +130,7 @@ export function ProductCatalog() {
     setName(product.name);
     setBrand(product.brand);
     setMrp(product.mrp);
+    setRate(product.rate ?? 0);
     setHsnCode(product.hsn_code);
     if (DEFAULT_UNIT_OPTIONS.includes(product.unit_name)) {
       setUnitName(product.unit_name);
@@ -175,8 +178,22 @@ export function ProductCatalog() {
       .trim()
       .toLowerCase();
 
-    if (!name || !brand || !mrp || !hsnCode || !resolvedUnitName || !unitQty) {
+    if (
+      !name ||
+      !brand ||
+      rate === "" ||
+      !mrp ||
+      !hsnCode ||
+      !resolvedUnitName ||
+      !unitQty
+    ) {
       setErrMsg("Please fill all fields before submitting.");
+      return;
+    }
+
+    const parsedRate = Number(rate);
+    if (!Number.isFinite(parsedRate) || parsedRate < 0) {
+      setErrMsg("Rate must be a valid non-negative number.");
       return;
     }
 
@@ -189,6 +206,7 @@ export function ProductCatalog() {
       name: name.trim(),
       brand: brand.trim(),
       mrp: Number(mrp),
+      rate: parsedRate,
       hsn_code: String(hsnCode).trim(),
       unit_name: resolvedUnitName,
       unit_qty: Number(unitQty),
@@ -238,6 +256,17 @@ export function ProductCatalog() {
                   setMrp(e.target.value);
                 }}
                 placeholder="product MRP"
+                required
+              />
+              <input
+                type="number"
+                value={rate}
+                min="0"
+                step="0.01"
+                onChange={(e) => {
+                  setRate(e.target.value);
+                }}
+                placeholder="purchase/base rate"
                 required
               />
               <input

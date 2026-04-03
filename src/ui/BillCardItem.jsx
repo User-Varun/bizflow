@@ -6,6 +6,10 @@ import "../styles/productCard.css";
 export function BillCardItem({ res }) {
   const rateElRef = useRef(null);
   const discountElRef = useRef(null);
+  const mrp = Number(res?.mrp ?? 0);
+  const safeMrp = Number.isFinite(mrp) ? mrp : 0;
+  const baseRate = Number(res?.rate ?? res?.mrp ?? 0);
+  const safeBaseRate = Number.isFinite(baseRate) ? baseRate : 0;
 
   const { state: searchItemsState, dispatch: searchItemsDispatch } =
     useSearchItems();
@@ -22,6 +26,8 @@ export function BillCardItem({ res }) {
     let billToUpdate;
     const id = e.target.dataset.id; // get will get data attribute named "data-id"
     const qty = searchItemsState.quantities?.[id] || 0;
+    const inputRate = Number(searchItemsState.rate?.[id]);
+    const safeRate = Number.isFinite(inputRate) ? inputRate : safeBaseRate;
     const discountInput = Number(searchItemsState.discount?.[id] ?? 0);
     const safeDiscount = Number.isFinite(discountInput)
       ? Math.max(0, Math.min(100, discountInput))
@@ -39,7 +45,7 @@ export function BillCardItem({ res }) {
           ? {
               ...item,
               item_qty: (item.item_qty || 0) + qty,
-              rate: Number(searchItemsState.rate[id]),
+              rate: safeRate,
               discount: safeDiscount,
             }
           : item;
@@ -57,7 +63,7 @@ export function BillCardItem({ res }) {
         {
           ...res,
           item_qty: qty,
-          rate: Number(searchItemsState.rate[id]),
+          rate: safeRate,
           discount: safeDiscount,
         },
       ];
@@ -71,8 +77,16 @@ export function BillCardItem({ res }) {
     // reset the selected qty for this product only
     searchItemsDispatch({ type: "RESET_QTY", payload: { id: res.id } });
     searchItemsDispatch({ type: "RESET_RATE", payload: { id: res.id } });
+    searchItemsDispatch({
+      type: "RESET_PURCHASE_RATE_PERCENT",
+      payload: { id: res.id },
+    });
     searchItemsDispatch({ type: "RESET_DISCOUNT", payload: { id: res.id } });
   }
+
+  const manualRate = searchItemsState.rate?.[res.id];
+  const displayRateValue =
+    manualRate === "" || manualRate == null ? safeBaseRate : manualRate;
 
   return (
     <div className="cardItem bill-item-card" key={res.id || res.name}>
@@ -80,7 +94,12 @@ export function BillCardItem({ res }) {
         <div className="bill-item-name-wrap">
           <span className="bill-item-name">{res.name}</span>
         </div>
-        <span className="bill-item-price">₹{res.mrp}</span>
+        <div className="bill-item-price-stack">
+          <span className="bill-item-price">MRP: ₹{safeMrp}</span>
+          <span className="bill-item-rate-secondary">
+            Rate: ₹{safeBaseRate}
+          </span>
+        </div>
       </div>
 
       <div className="bill-item-meta-row">
@@ -111,9 +130,21 @@ export function BillCardItem({ res }) {
           >
             -
           </button>
-          <span className="itemContainerField">
-            {searchItemsState.quantities[res.id] || 0}
-          </span>
+          <input
+            className="itemContainerField itemContainerInput"
+            type="number"
+            min="0"
+            step="1"
+            placeholder="0"
+            value={searchItemsState.quantities?.[res.id] ?? ""}
+            onFocus={(e) => e.target.select()}
+            onChange={(e) =>
+              searchItemsDispatch({
+                type: "SET_QTY",
+                payload: { id: res.id, qty: e.target.value },
+              })
+            }
+          />
           <button
             className="itemContainerBtn"
             onClick={() =>
@@ -127,12 +158,56 @@ export function BillCardItem({ res }) {
           </button>
         </div>
 
-        <div className="bill-price-controls">
+        <div
+          className={`bill-price-controls ${isStockIn ? "bill-price-controls-stock-in" : ""}`}
+        >
+          {!isStockIn ? (
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="Purchase %"
+              value={searchItemsState.purchaseRatePercent?.[res.id] ?? ""}
+              onChange={(e) => {
+                const rawPercent = e.target.value;
+
+                searchItemsDispatch({
+                  type: "SET_PURCHASE_RATE_PERCENT",
+                  payload: { id: res.id, inputFieldValue: rawPercent },
+                });
+
+                if (rawPercent === "") {
+                  searchItemsDispatch({
+                    type: "SET_RATE",
+                    payload: {
+                      id: res.id,
+                      inputFieldValue: safeBaseRate,
+                    },
+                  });
+                  return;
+                }
+
+                const percent = Number(rawPercent);
+                if (!Number.isFinite(percent) || percent < 0) return;
+
+                const computedRate = safeBaseRate * (1 + percent / 100);
+                searchItemsDispatch({
+                  type: "SET_RATE",
+                  payload: {
+                    id: res.id,
+                    inputFieldValue: Number(computedRate.toFixed(2)),
+                  },
+                });
+              }}
+              className="rate-input purchase-rate-input"
+            />
+          ) : null}
+
           <input
             ref={rateElRef}
             type="number"
             placeholder="Rate"
-            value={searchItemsState.rate?.[res.id] ?? ""}
+            value={displayRateValue}
             onChange={(e) =>
               searchItemsDispatch({
                 type: "SET_RATE",
@@ -152,7 +227,7 @@ export function BillCardItem({ res }) {
             max="100"
             step="0.01"
             placeholder="Disc %"
-            value={searchItemsState.discount?.[res.id] ?? ""}
+            value={searchItemsState.discount?.[res.id] ?? 0}
             onChange={(e) =>
               searchItemsDispatch({
                 type: "SET_DISCOUNT",

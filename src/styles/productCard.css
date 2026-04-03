@@ -515,6 +515,13 @@
   gap: 0.6rem;
 }
 
+.bill-item-price-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.08rem;
+}
+
 .bill-item-name-wrap {
   display: flex;
   flex-direction: column;
@@ -578,9 +585,16 @@
 }
 
 .bill-item-price {
-  font-size: 0.95rem;
+  font-size: 0.82rem;
   font-weight: 700;
   color: #0f766e;
+  white-space: nowrap;
+}
+
+.bill-item-rate-secondary {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #64748b;
   white-space: nowrap;
 }
 
@@ -599,9 +613,13 @@
 
 .bill-item-card .bill-price-controls {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.35rem;
   width: 100%;
+}
+
+.bill-item-card .bill-price-controls-stock-in {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .bill-item-card .rate-input {
@@ -627,6 +645,23 @@
   min-width: 26px;
   padding: 4px 8px;
   font-size: 0.8rem;
+}
+
+.bill-item-card .itemContainerInput {
+  width: 44px;
+  min-width: 44px;
+  text-align: center;
+  border: 1px solid #d5dbe6;
+}
+
+.bill-item-card .itemContainerInput::-webkit-outer-spin-button,
+.bill-item-card .itemContainerInput::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.bill-item-card .itemContainerInput[type="number"] {
+  -moz-appearance: textfield;
 }
 
 .bill-item-add-btn {

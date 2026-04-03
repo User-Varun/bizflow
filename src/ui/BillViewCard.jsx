@@ -118,6 +118,11 @@ export function BillViewCard({
     <div className="billCard">
       <div className="billCardList">
         <div className="billCardField">
+          <p className="billCardLabel">Invoice No</p>
+          <p className="billCardValue">{res.invoice_number || "-"}</p>
+        </div>
+
+        <div className="billCardField">
           <p className="billCardLabel">Bill Type</p>
           <p className="billCardValue">{res.invoice_type}</p>
         </div>
