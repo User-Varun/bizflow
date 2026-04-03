@@ -87,6 +87,8 @@ export function BillCardItem({ res }) {
   const manualRate = searchItemsState.rate?.[res.id];
   const displayRateValue =
     manualRate === "" || manualRate == null ? safeBaseRate : manualRate;
+  const purchasePercentValue = searchItemsState.purchaseRatePercent?.[res.id];
+  const discountValue = searchItemsState.discount?.[res.id];
 
   return (
     <div className="cardItem bill-item-card" key={res.id || res.name}>
@@ -167,7 +169,10 @@ export function BillCardItem({ res }) {
               min="0"
               step="0.01"
               placeholder="Purchase %"
-              value={searchItemsState.purchaseRatePercent?.[res.id] ?? ""}
+              value={
+                purchasePercentValue === undefined ? 0 : purchasePercentValue
+              }
+              onFocus={(e) => e.target.select()}
               onChange={(e) => {
                 const rawPercent = e.target.value;
 
@@ -227,7 +232,8 @@ export function BillCardItem({ res }) {
             max="100"
             step="0.01"
             placeholder="Disc %"
-            value={searchItemsState.discount?.[res.id] ?? 0}
+            value={discountValue === undefined ? 0 : discountValue}
+            onFocus={(e) => e.target.select()}
             onChange={(e) =>
               searchItemsDispatch({
                 type: "SET_DISCOUNT",

@@ -82,10 +82,7 @@ export function reducerFn(state, action) {
         ...state,
         discount: {
           ...state.discount,
-          [action.payload.id]:
-            action.payload.inputFieldValue === ""
-              ? 0
-              : action.payload.inputFieldValue,
+          [action.payload.id]: action.payload.inputFieldValue,
         },
       };
 
@@ -116,7 +113,7 @@ export function reducerFn(state, action) {
         ...state,
         purchaseRatePercent: {
           ...state.purchaseRatePercent,
-          [action.payload.id]: "",
+          [action.payload.id]: 0,
         },
       };
     case "RESET_DISCOUNT":

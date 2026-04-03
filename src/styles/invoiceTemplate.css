@@ -316,6 +316,9 @@ body {
   gap: 0.8rem;
   flex-wrap: wrap;
   justify-content: center;
+  width: 100%;
+  margin-top: 0.2rem;
+  padding-bottom: 0.5rem;
 }
 
 .invoice-action-btn {
@@ -341,18 +344,18 @@ body {
 }
 
 .invoice-template-container {
-  padding: 1rem;
+  padding: 1rem 1rem 1.4rem;
   border-radius: 0.4rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
   gap: 1.7rem;
-  width: 100%;
-  max-width: 100%;
+  width: min(100%, 1320px);
+  max-width: 1320px;
   margin: 0 auto;
   box-sizing: border-box;
-  min-height: 77vh;
+  min-height: calc(100% - 0.5rem);
   height: auto;
   background-color: #d4d4d4;
 }

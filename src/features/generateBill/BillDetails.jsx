@@ -88,6 +88,11 @@ export function BillDetails({ setShowInvoice, setBillId }) {
     return Number((totalAmount + taxAmount - discountAmount).toFixed(2));
   }, [totalAmount, discountAmount, state.cgst, state.sgst]);
 
+  const roundedEstimatedBillAmount = useMemo(
+    () => Math.round(Number(estimatedBillAmount || 0)),
+    [estimatedBillAmount],
+  );
+
   // mamaJi data (This data Will come from user Profile in future, when user auth is implemented )
   const mamaJiDetails = {
     name: "V.S. Enterprises",
@@ -624,7 +629,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
           />
         ) : null}
         <div className="form-sub-container">
-          <p>Your Total : ₹{estimatedBillAmount}</p>
+          <p>Your Total : ₹{roundedEstimatedBillAmount}</p>
           <div className="form-sub-container2">
             <div>
               <em>CGST </em>{" "}

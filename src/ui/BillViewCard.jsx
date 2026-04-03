@@ -69,6 +69,7 @@ export function BillViewCard({
   })();
 
   const pendingAmount = Number(res?.pending_amount || 0);
+  const roundedPendingAmount = Math.round(pendingAmount);
   const isPaid = String(res?.bill_state || "") === "paid" || pendingAmount <= 0;
 
   async function handlePay() {
@@ -156,7 +157,7 @@ export function BillViewCard({
         <div className="billCardField billCardFieldPending">
           <p className="billCardLabel">Pending</p>
           <p className="billCardValue billPendingValue">
-            ₹{pendingAmount.toFixed(2)}
+            ₹{roundedPendingAmount}
           </p>
         </div>
       </div>

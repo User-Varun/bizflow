@@ -50,7 +50,7 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
   }
 
   function formatAmt(n) {
-    return `₹${Number(n || 0).toFixed(2)}`;
+    return `₹${Math.round(Number(n || 0))}`;
   }
 
   function numberToWords(num) {

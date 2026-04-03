@@ -22,6 +22,19 @@ body {
   min-width: 0;
 }
 
+#generateBillContainer.generate-bill-invoice-view {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  align-items: start;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.8rem clamp(0.9rem, 2vw, 1.8rem) 1.2rem;
+}
+
+#generateBillContainer.generate-bill-invoice-view > * {
+  width: min(100%, 1320px);
+}
+
 @media (max-width: 980px) {
   #generateBillContainer {
     width: 100%;
@@ -29,5 +42,11 @@ body {
     gap: 0.7rem;
     padding: 0.6rem 0.75rem 0.9rem;
     height: calc(100dvh - 10vh - 0.8rem);
+  }
+
+  #generateBillContainer.generate-bill-invoice-view {
+    grid-template-columns: 1fr;
+    justify-items: stretch;
+    padding: 0.6rem 0.75rem 1rem;
   }
 }
