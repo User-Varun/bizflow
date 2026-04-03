@@ -73,7 +73,9 @@ export function EditInvoiceModal({
 
   function updateItem(rowId, key, value) {
     setEditableItems((prev) =>
-      prev.map((item) => (item.rowId === rowId ? { ...item, [key]: value } : item)),
+      prev.map((item) =>
+        item.rowId === rowId ? { ...item, [key]: value } : item,
+      ),
     );
   }
 
@@ -85,7 +87,9 @@ export function EditInvoiceModal({
     setLocalError("");
     if (!selectedAddId) return;
 
-    const selected = sourceOptions.find((item) => String(item.id) === selectedAddId);
+    const selected = sourceOptions.find(
+      (item) => String(item.id) === selectedAddId,
+    );
     if (!selected) return;
 
     setEditableItems((prev) => [
@@ -114,7 +118,12 @@ export function EditInvoiceModal({
     e.preventDefault();
     setLocalError("");
 
-    if (!partyName.trim() || !partyAddress.trim() || !partyPhone.trim() || !partyGst.trim()) {
+    if (
+      !partyName.trim() ||
+      !partyAddress.trim() ||
+      !partyPhone.trim() ||
+      !partyGst.trim()
+    ) {
       setLocalError("Party details are required.");
       return;
     }
@@ -170,15 +179,22 @@ export function EditInvoiceModal({
       >
         <div className="edit-invoice-header">
           <h2>Edit Invoice</h2>
-          <button type="button" className="edit-invoice-close" onClick={onClose}>
+          <button
+            type="button"
+            className="edit-invoice-close"
+            onClick={onClose}
+          >
             x
           </button>
         </div>
 
         <div className="edit-invoice-lock-info">
-          <span>Locked: Invoice No, Bill Type, Created Date, Payment History</span>
+          <span>
+            Locked: Invoice No, Bill Type, Created Date, Payment History
+          </span>
           <p>
-            #{invoiceData?.invoice_number || "-"} | {invoiceData?.invoice_type || "-"}
+            #{invoiceData?.invoice_number || "-"} |{" "}
+            {invoiceData?.invoice_type || "-"}
           </p>
         </div>
 
@@ -235,7 +251,11 @@ export function EditInvoiceModal({
                 </option>
               ))}
             </select>
-            <button type="button" onClick={addSelectedItem} disabled={!selectedAddId}>
+            <button
+              type="button"
+              onClick={addSelectedItem}
+              disabled={!selectedAddId}
+            >
               Add Item
             </button>
           </div>
@@ -266,7 +286,9 @@ export function EditInvoiceModal({
                         min="1"
                         step="1"
                         value={item.product_qty}
-                        onChange={(e) => updateItem(item.rowId, "product_qty", e.target.value)}
+                        onChange={(e) =>
+                          updateItem(item.rowId, "product_qty", e.target.value)
+                        }
                       />
                     </td>
                     <td>
@@ -275,7 +297,9 @@ export function EditInvoiceModal({
                         min="0"
                         step="0.01"
                         value={item.rate}
-                        onChange={(e) => updateItem(item.rowId, "rate", e.target.value)}
+                        onChange={(e) =>
+                          updateItem(item.rowId, "rate", e.target.value)
+                        }
                       />
                     </td>
                     <td>
@@ -285,11 +309,16 @@ export function EditInvoiceModal({
                         max="100"
                         step="0.01"
                         value={item.discount}
-                        onChange={(e) => updateItem(item.rowId, "discount", e.target.value)}
+                        onChange={(e) =>
+                          updateItem(item.rowId, "discount", e.target.value)
+                        }
                       />
                     </td>
                     <td>
-                      <button type="button" onClick={() => removeItem(item.rowId)}>
+                      <button
+                        type="button"
+                        onClick={() => removeItem(item.rowId)}
+                      >
                         Remove
                       </button>
                     </td>
@@ -299,8 +328,12 @@ export function EditInvoiceModal({
             </table>
           </div>
 
-          {localError ? <p className="edit-invoice-error">{localError}</p> : null}
-          {errorMessage ? <p className="edit-invoice-error">{errorMessage}</p> : null}
+          {localError ? (
+            <p className="edit-invoice-error">{localError}</p>
+          ) : null}
+          {errorMessage ? (
+            <p className="edit-invoice-error">{errorMessage}</p>
+          ) : null}
 
           <div className="edit-invoice-actions">
             <button type="button" onClick={onClose} disabled={isSaving}>

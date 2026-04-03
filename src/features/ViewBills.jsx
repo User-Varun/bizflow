@@ -110,7 +110,8 @@ export function ViewBills() {
     ],
     queryFn: async () => {
       const invoiceType = invoiceToEditQuery.data?.result?.invoice_type;
-      const sourcePath = invoiceType === "stock_in" ? "productCatalog" : "inventory";
+      const sourcePath =
+        invoiceType === "stock_in" ? "productCatalog" : "inventory";
 
       const response = await requestJSON(
         `${baseUrl}/${sourcePath}?page=1&pageSize=200&search=`,
@@ -304,7 +305,9 @@ export function ViewBills() {
         onClose={closeEditInvoiceModal}
         invoiceData={invoiceToEditQuery.data?.result || null}
         sourceItems={editSourceQuery.data || []}
-        sourceLoading={editSourceQuery.isLoading || invoiceToEditQuery.isLoading}
+        sourceLoading={
+          editSourceQuery.isLoading || invoiceToEditQuery.isLoading
+        }
         isSaving={editInvoiceMutation.isPending}
         errorMessage={editInvoiceError}
         onSave={async (payload) => {
