@@ -1,14 +1,16 @@
 import "../../styles/generateBillStyles/billDetails.css";
 import { useBill } from "./hooks/useBill";
 import { ProductCard } from "../../ui/ProductCard.jsx";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { requestJSON } from "../../styles/utils/requestJSON.js";
+import { PaginationComp } from "../../ui/PaginationComp.jsx";
 const STOCK_IN = import.meta.env.VITE_STOCK_IN;
 const STOCK_OUT = import.meta.env.VITE_STOCK_OUT;
 const baseUrl = import.meta.env.VITE_API_URL;
 const DEALER_CACHE_KEY = "bizflow.dealerCache.v1";
 const DEALER_CACHE_LIMIT = 20;
+const BILL_ITEMS_PAGE_SIZE = 6;
 
 function safeReadDealerCache() {
   try {
@@ -38,9 +40,28 @@ export function BillDetails({ setShowInvoice, setBillId }) {
   const [errorModalMessage, setErrorModalMessage] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [createdInvoiceId, setCreatedInvoiceId] = useState(null);
+  const [billItemsPage, setBillItemsPage] = useState(1);
   const [cachedDealers, setCachedDealers] = useState(() =>
     safeReadDealerCache(),
   );
+
+  useEffect(() => {
+    const totalItems = state.invoice_items?.length || 0;
+    const totalPages = Math.max(
+      1,
+      Math.ceil(totalItems / BILL_ITEMS_PAGE_SIZE),
+    );
+
+    if (billItemsPage > totalPages) {
+      setBillItemsPage(totalPages);
+    }
+  }, [state.invoice_items, billItemsPage]);
+
+  const pagedInvoiceItems = useMemo(() => {
+    const start = (billItemsPage - 1) * BILL_ITEMS_PAGE_SIZE;
+    const end = start + BILL_ITEMS_PAGE_SIZE;
+    return (state.invoice_items || []).slice(start, end);
+  }, [state.invoice_items, billItemsPage]);
 
   const totalAmount = useMemo(() => {
     return state.invoice_items.reduce(
@@ -99,6 +120,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
     setDepositedAmount("0");
     setPaymentMethod("cash");
     setManualInvoiceDate("");
+    setBillItemsPage(1);
   }
 
   function handleCreateAnotherBill() {
@@ -345,6 +367,8 @@ export function BillDetails({ setShowInvoice, setBillId }) {
       },
     });
 
+    setBillItemsPage(1);
+
     // then apply the value based on the invoice_type
 
     if (selectedType === STOCK_OUT) {
@@ -567,7 +591,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
 
         <div id="billItemsContainer" className="scroll-hide">
           {state.invoice_items && state.invoice_items.length > 0 ? (
-            state.invoice_items.map((item) => {
+            pagedInvoiceItems.map((item) => {
               return (
                 <ProductCard
                   res={item}
@@ -583,6 +607,19 @@ export function BillDetails({ setShowInvoice, setBillId }) {
             </span>
           )}
         </div>
+        {state.invoice_items &&
+        state.invoice_items.length > BILL_ITEMS_PAGE_SIZE ? (
+          <PaginationComp
+            page={billItemsPage}
+            pageSize={BILL_ITEMS_PAGE_SIZE}
+            total={state.invoice_items.length}
+            onChange={setBillItemsPage}
+            disabled={generateInvoiceMutation.isPending}
+            showFirstLast={true}
+            siblingCount={1}
+            ariaLabel="Bill items pagination"
+          />
+        ) : null}
         <div className="form-sub-container">
           <p>Your Total : ₹{estimatedBillAmount}</p>
           <div className="form-sub-container2">

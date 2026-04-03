@@ -416,6 +416,14 @@
   gap: 0.5rem;
 }
 
+.cardItem-in-bill-details .product-compact-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+  align-items: center;
+  overflow: visible;
+}
+
 .cardItem-in-bill-details .product-name {
   font-size: 0.92rem;
 }
