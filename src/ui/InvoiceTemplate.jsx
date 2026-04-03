@@ -16,8 +16,18 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
       }),
     select: (payload) => payload?.result || null,
     enabled: Boolean(id),
-    staleTime: 30000,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
+
+  function buildQrSrc(qrUrl, versionSeed) {
+    const url = String(qrUrl || "").trim();
+    if (!url) return "/qr.png";
+    if (url.startsWith("data:")) return url;
+
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}v=${encodeURIComponent(String(versionSeed || "0"))}`;
+  }
 
   function clacSubTotal() {
     return Number(data?.sub_total || 0);
@@ -193,6 +203,7 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
 
   const gstinValue = invoiceType === "stock_out" ? companyGstin : partyGstin;
   const gstValue = invoiceType === "stock_out" ? partyGstin : companyGstin;
+  const qrSrc = buildQrSrc(data?.qr_url, data?.tenant_payment_updated_at);
 
   if (isLoading) {
     return <LoadingSpinner label="Loading invoice..." minHeight="300px" />;
@@ -309,20 +320,15 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
                 </div>
                 <div className="bank">
                   <span>
-                    <strong>HDFC BANK: </strong> (needs edit)
+                    <strong>A/C NO: </strong> {data.account_number || "-"}
                   </span>
                   <span>
-                    I<strong>FSC CODE: </strong> (needs edit)
+                    <strong>IFSC CODE: </strong> {data.ifsc_code || "-"}
                   </span>
                 </div>
               </div>
               <div className="inner-right-block">
-                <img
-                  className="qr"
-                  // src={data[0].qr_url || "/qr.png"}
-                  src={"/qr.png"}
-                  alt="QR code"
-                />
+                <img className="qr" src={qrSrc} alt="QR code" />
                 <span>For V.S. Enterprises</span>
               </div>
               <div className="inner-middle-down-block">

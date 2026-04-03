@@ -34,6 +34,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
   const queryClient = useQueryClient();
   const [depositedAmount, setDepositedAmount] = useState("0");
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [manualInvoiceDate, setManualInvoiceDate] = useState("");
   const [errorModalMessage, setErrorModalMessage] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [createdInvoiceId, setCreatedInvoiceId] = useState(null);
@@ -97,6 +98,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
 
     setDepositedAmount("0");
     setPaymentMethod("cash");
+    setManualInvoiceDate("");
   }
 
   function handleCreateAnotherBill() {
@@ -232,6 +234,16 @@ export function BillDetails({ setShowInvoice, setBillId }) {
       return;
     }
 
+    let createdAtOverride = null;
+    if (manualInvoiceDate) {
+      const parsed = new Date(`${manualInvoiceDate}T12:00:00`);
+      if (Number.isNaN(parsed.getTime())) {
+        setErrorModalMessage("Invalid invoice date selected.");
+        return;
+      }
+      createdAtOverride = parsed.toISOString();
+    }
+
     const invoiceDetails =
       state.invoice_type === STOCK_OUT
         ? {
@@ -240,6 +252,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
             address_to: state.address_to,
             phone_to: state.phone_to,
             other_party_gst: state.other_party_gst,
+            created_at: createdAtOverride,
           }
         : {
             invoice_type: STOCK_IN,
@@ -247,6 +260,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
             address_from: state.address_from,
             phone_from: state.phone_from,
             other_party_gst: state.other_party_gst,
+            created_at: createdAtOverride,
           };
 
     const invoiceItemsDetails = state.invoice_items.map((item) => {
@@ -608,6 +622,16 @@ export function BillDetails({ setShowInvoice, setBillId }) {
         </div>
 
         <div className="form-sub-container payment-row">
+          <div className="form-el-container">
+            <span>Invoice Date (optional)</span>
+            <input
+              className="formEl"
+              type="date"
+              value={manualInvoiceDate}
+              onChange={(e) => setManualInvoiceDate(e.target.value)}
+            />
+          </div>
+
           <div className="form-el-container">
             <span>Deposited Amount</span>
             <input

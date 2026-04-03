@@ -8,6 +8,9 @@ import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { requestJSON } from "../styles/utils/requestJSON";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+const DEFAULT_UNIT_OPTIONS = ["pcs", "box", "jar"];
+const CUSTOM_UNIT_OPTION = "__custom_unit__";
+
 export function ProductCatalog() {
   const queryClient = useQueryClient();
 
@@ -23,12 +26,21 @@ export function ProductCatalog() {
   const [mrp, setMrp] = useState("");
   const [hsnCode, setHsnCode] = useState("");
   const [unitName, setUnitName] = useState("pcs");
+  const [customUnitName, setCustomUnitName] = useState("");
   const [unitQty, setUnitQty] = useState("");
 
   const [page, setPage] = useState(1);
-  const pageSize = 8;
+  const pageSize = 10;
 
   const normalizedSearch = searchQuery.trim();
+  const isCustomUnitSelected = unitName === CUSTOM_UNIT_OPTION;
+
+  const unitOptions =
+    unitName &&
+    unitName !== CUSTOM_UNIT_OPTION &&
+    !DEFAULT_UNIT_OPTIONS.includes(unitName)
+      ? [...DEFAULT_UNIT_OPTIONS, unitName]
+      : DEFAULT_UNIT_OPTIONS;
 
   const { data, isLoading, isError, error, isFetching } = useQuery({
     queryKey: ["productCatalog", { page, pageSize, search: normalizedSearch }],
@@ -103,6 +115,7 @@ export function ProductCatalog() {
     setMrp(0);
     setHsnCode("");
     setUnitName("pcs");
+    setCustomUnitName("");
     setUnitQty("");
     setIsEditMode(false);
     setEditingProductId(null);
@@ -116,7 +129,13 @@ export function ProductCatalog() {
     setBrand(product.brand);
     setMrp(product.mrp);
     setHsnCode(product.hsn_code);
-    setUnitName(product.unit_name);
+    if (DEFAULT_UNIT_OPTIONS.includes(product.unit_name)) {
+      setUnitName(product.unit_name);
+      setCustomUnitName("");
+    } else {
+      setUnitName(CUSTOM_UNIT_OPTION);
+      setCustomUnitName(product.unit_name || "");
+    }
     setUnitQty(product.unit_qty);
     setIsOpen(true);
   }
@@ -150,8 +169,19 @@ export function ProductCatalog() {
     e.preventDefault();
     setErrMsg("");
 
-    if (!name || !brand || !mrp || !hsnCode || !unitName || !unitQty) {
+    const resolvedUnitName = String(
+      isCustomUnitSelected ? customUnitName : unitName,
+    )
+      .trim()
+      .toLowerCase();
+
+    if (!name || !brand || !mrp || !hsnCode || !resolvedUnitName || !unitQty) {
       setErrMsg("Please fill all fields before submitting.");
+      return;
+    }
+
+    if (resolvedUnitName.length > 50) {
+      setErrMsg("Unit name must be 50 characters or less.");
       return;
     }
 
@@ -160,7 +190,7 @@ export function ProductCatalog() {
       brand: brand.trim(),
       mrp: Number(mrp),
       hsn_code: String(hsnCode).trim(),
-      unit_name: unitName,
+      unit_name: resolvedUnitName,
       unit_qty: Number(unitQty),
     };
 
@@ -223,14 +253,31 @@ export function ProductCatalog() {
               <select
                 value={unitName}
                 onChange={(e) => {
-                  setUnitName(e.target.value);
+                  const selected = e.target.value;
+                  setUnitName(selected);
+                  if (selected !== CUSTOM_UNIT_OPTION) {
+                    setCustomUnitName("");
+                  }
                 }}
                 required
               >
-                <option value="pcs">pcs</option>
-                <option value="box">box</option>
-                <option value="jar">jar</option>
+                {unitOptions.map((option) => (
+                  <option value={option} key={option}>
+                    {option}
+                  </option>
+                ))}
+                <option value={CUSTOM_UNIT_OPTION}>+ Add custom unit</option>
               </select>
+              {isCustomUnitSelected ? (
+                <input
+                  type="text"
+                  value={customUnitName}
+                  onChange={(e) => setCustomUnitName(e.target.value)}
+                  placeholder="Enter custom unit name (e.g. strip, packet)"
+                  maxLength={50}
+                  required
+                />
+              ) : null}
               <input
                 type="number"
                 value={unitQty}

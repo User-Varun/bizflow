@@ -1,10 +1,39 @@
 import "../styles/billViewCard.css";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-export function BillViewCard({ res, setShowInvoice, setId, onPay, isPaying }) {
+export function BillViewCard({
+  res,
+  setShowInvoice,
+  setId,
+  onPay,
+  onUpdateDate,
+  isPaying,
+  isUpdatingDate,
+}) {
   const [amount, setAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [localCreatedAt, setLocalCreatedAt] = useState(res?.createdAt || null);
+  const [editDate, setEditDate] = useState(() => {
+    if (!res?.createdAt) return "";
+    const d = new Date(res.createdAt);
+    if (Number.isNaN(d.getTime())) return "";
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(d.getUTCDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  });
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  useEffect(() => {
+    setLocalCreatedAt(res?.createdAt || null);
+  }, [res?.createdAt]);
+
+  useEffect(() => {
+    if (!success) return;
+    const timerId = setTimeout(() => setSuccess(""), 2500);
+    return () => clearTimeout(timerId);
+  }, [success]);
 
   const truncate = (text, max = 20) => {
     if (!text) return "";
@@ -14,11 +43,25 @@ export function BillViewCard({ res, setShowInvoice, setId, onPay, isPaying }) {
 
   // Format createdAt as DD-MM-YYYY using UTC to avoid timezone shifts
   const formattedDate = (() => {
-    if (!res?.createdAt) return "";
-    const d = new Date(res.createdAt);
+    if (!localCreatedAt) return "";
+    const d = new Date(localCreatedAt);
     if (Number.isNaN(d.getTime())) return "";
     const day = String(d.getUTCDate()).padStart(2, "0");
-    const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const monthNames = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    const month = monthNames[d.getUTCMonth()] || "";
     const year = d.getUTCFullYear();
     return `${day}-${month}-${year}`;
   })();
@@ -46,6 +89,28 @@ export function BillViewCard({ res, setShowInvoice, setId, onPay, isPaying }) {
       setAmount("");
     } catch (err) {
       setError(err?.message || "Failed to add payment.");
+    }
+  }
+
+  async function handleUpdateDate() {
+    if (!onUpdateDate) return;
+
+    setError("");
+    setSuccess("");
+    if (!editDate) {
+      setError("Please select a valid date.");
+      return;
+    }
+
+    try {
+      const created_at = new Date(`${editDate}T12:00:00`).toISOString();
+      const response = await onUpdateDate({ created_at });
+      const persistedCreatedAt = response?.result?.createdAt || created_at;
+
+      setLocalCreatedAt(persistedCreatedAt);
+      setSuccess("Date updated successfully.");
+    } catch (err) {
+      setError(err?.message || "Failed to update invoice date.");
     }
   }
 
@@ -121,7 +186,26 @@ export function BillViewCard({ res, setShowInvoice, setId, onPay, isPaying }) {
           </button>
         </div>
 
+        <div className="bill-date-box">
+          <input
+            type="date"
+            className="bill-pay-input bill-date-input"
+            value={editDate}
+            onChange={(e) => setEditDate(e.target.value)}
+            disabled={isUpdatingDate}
+          />
+          <button
+            type="button"
+            className="bill-card-btn bill-date-btn"
+            onClick={handleUpdateDate}
+            disabled={isUpdatingDate}
+          >
+            {isUpdatingDate ? "Updating..." : "Update Date"}
+          </button>
+        </div>
+
         {error ? <p className="bill-pay-error">{error}</p> : null}
+        {success ? <p className="bill-date-success">{success}</p> : null}
 
         <button
           className="bill-card-btn"

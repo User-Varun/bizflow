@@ -17,8 +17,8 @@ export function SearchItems() {
   // Load defaults on mount/invoice_type change
   const [searchQuery, setSearchQuery] = useState("");
   const normalizedSearch = searchQuery.trim();
-  const isStockOut = state.invoice_type === "stock_out";
-  const sourcePath = isStockOut ? "inventory" : "productCatalog";
+  const isStockIn = state.invoice_type === "stock_in";
+  const sourcePath = isStockIn ? "productCatalog" : "inventory";
 
   const {
     data: products = [],
@@ -41,7 +41,7 @@ export function SearchItems() {
       const items = payload?.result ?? [];
 
       // For stock_out, show only inventory rows that still have quantity.
-      if (isStockOut) {
+      if (!isStockIn) {
         return items.filter((item) => Number(item?.product_qty || 0) > 0);
       }
 
@@ -53,7 +53,7 @@ export function SearchItems() {
   if (isLoading) {
     return (
       <LoadingSpinner
-        label={isStockOut ? "Loading inventory..." : "Loading products..."}
+        label={isStockIn ? "Loading products..." : "Loading inventory..."}
       />
     );
   }
@@ -72,7 +72,7 @@ export function SearchItems() {
           })
         ) : (
           <h1>
-            {isStockOut ? "No inventory items found!" : "No products found!"}
+            {isStockIn ? "No products found!" : "No inventory items found!"}
           </h1>
         )}
       </div>

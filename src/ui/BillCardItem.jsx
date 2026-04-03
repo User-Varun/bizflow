@@ -10,6 +10,11 @@ export function BillCardItem({ res }) {
   const { state: searchItemsState, dispatch: searchItemsDispatch } =
     useSearchItems();
   const { state: billState, dispatch: billDispatch } = useBill();
+  const isStockIn = billState.invoice_type === "stock_in";
+  const isStockOut = billState.invoice_type === "stock_out";
+  const inventoryQty = Number(res?.product_qty || 0);
+  const showInventoryQty =
+    (isStockIn || isStockOut) && Number.isFinite(inventoryQty);
 
   function handleAddItem(e) {
     e.preventDefault();
@@ -84,6 +89,14 @@ export function BillCardItem({ res }) {
           {res.unit_qty} {res.unit_name}
         </span>
       </div>
+
+      {showInventoryQty && (
+        <div className="bill-item-inventory-row">
+          <span className="bill-item-inventory-pill">
+            In stock: {inventoryQty}
+          </span>
+        </div>
+      )}
 
       <div className="cardSubContainer">
         <div className="itemCounterContainer">

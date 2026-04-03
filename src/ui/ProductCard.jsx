@@ -16,6 +16,9 @@ export function ProductCard({
   };
 
   const stockQty = Number(res?.product_qty ?? res?.item_qty ?? 0);
+  const unitLabel = `${res?.unit_qty ?? ""} ${res?.unit_name ?? ""}`.trim();
+  const hsnLabel = `HSN: ${res?.hsn_code ?? ""}`;
+  const showInventoryTopQty = compact && !prodCat && !billDetailsCard;
 
   return (
     <div
@@ -42,23 +45,36 @@ export function ProductCard({
               <h3 className="product-compact-name" title={res.name || ""}>
                 {truncate(res.name, 34)}
               </h3>
-              <p className="product-compact-brand">{truncate(res.brand, 26)}</p>
+              <p className="product-compact-brand" title={res.brand || ""}>
+                {truncate(res.brand, 26)}
+              </p>
             </div>
-            <span className="product-compact-price">
-              ₹{billDetailsCard ? res.rate : res.mrp}
-            </span>
+            <div className="product-compact-price-stack">
+              <span className="product-compact-price">
+                ₹{billDetailsCard ? res.rate : res.mrp}
+              </span>
+              {showInventoryTopQty ? (
+                <span className="product-compact-chip qty-highlight stock-highlight compact-top-qty">
+                  Qty: {stockQty}
+                </span>
+              ) : null}
+            </div>
           </div>
 
           <div className="product-compact-meta">
-            <span className="product-compact-chip">
-              {res.unit_qty} per {res.unit_name}
+            <span
+              className="product-compact-chip trunc-chip unit-chip"
+              title={unitLabel}
+            >
+              {truncate(unitLabel, 16)}
             </span>
             {billDetailsCard ? (
               <span className="product-compact-chip qty-highlight">
                 Qty: {Number(res?.item_qty || 0)}
               </span>
             ) : (
-              !prodCat && (
+              !prodCat &&
+              !showInventoryTopQty && (
                 <span className="product-compact-chip qty-highlight stock-highlight">
                   Qty: {stockQty}
                 </span>
@@ -69,7 +85,12 @@ export function ProductCard({
                 Disc: {Number(res?.discount || 0)}%
               </span>
             ) : null}
-            <span className="product-compact-chip">HSN: {res.hsn_code}</span>
+            <span
+              className="product-compact-chip trunc-chip hsn-chip"
+              title={hsnLabel}
+            >
+              {truncate(hsnLabel, 16)}
+            </span>
           </div>
 
           {billDetailsCard && onRemove && (
@@ -121,7 +142,7 @@ export function ProductCard({
             <div className="detail-item">
               <label>Pack Size</label>
               <p className="detail-value">
-                {res.unit_qty} <strong>Per</strong> {res.unit_name}
+                {res.unit_qty} {res.unit_name}
               </p>
             </div>
           </div>

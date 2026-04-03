@@ -51,6 +51,37 @@ export function ViewBills() {
     },
   });
 
+  const updateInvoiceDateMutation = useMutation({
+    mutationFn: ({ id, created_at }) =>
+      requestJSON(`${baseUrl}/viewInvoices/${id}/date`, {
+        method: "PATCH",
+        body: JSON.stringify({ created_at }),
+      }),
+    onSuccess: (response) => {
+      const updatedId = response?.result?.id;
+      const updatedCreatedAt = response?.result?.createdAt;
+
+      if (updatedId && updatedCreatedAt) {
+        queryClient.setQueriesData({ queryKey: ["viewInvoices"] }, (old) => {
+          if (!old?.result || !Array.isArray(old.result)) return old;
+
+          return {
+            ...old,
+            result: old.result.map((bill) =>
+              bill.id === updatedId
+                ? { ...bill, createdAt: updatedCreatedAt }
+                : bill,
+            ),
+          };
+        });
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["viewInvoices"] });
+      queryClient.invalidateQueries({ queryKey: ["invoice"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+
   function handleSearchChange(value) {
     setSearchQuery(value);
     setPage(1);
@@ -114,9 +145,19 @@ export function ViewBills() {
                         payment_method,
                       })
                     }
+                    onUpdateDate={({ created_at }) =>
+                      updateInvoiceDateMutation.mutateAsync({
+                        id: res.id,
+                        created_at,
+                      })
+                    }
                     isPaying={
                       payInvoiceMutation.isPending &&
                       payInvoiceMutation.variables?.id === res.id
+                    }
+                    isUpdatingDate={
+                      updateInvoiceDateMutation.isPending &&
+                      updateInvoiceDateMutation.variables?.id === res.id
                     }
                   />
                 );
