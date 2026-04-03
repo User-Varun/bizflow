@@ -2,34 +2,13 @@ import "../../styles/generateBillStyles/billDetails.css";
 import { useBill } from "./hooks/useBill";
 import { ProductCard } from "../../ui/ProductCard.jsx";
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { requestJSON } from "../../styles/utils/requestJSON.js";
 import { PaginationComp } from "../../ui/PaginationComp.jsx";
 const STOCK_IN = import.meta.env.VITE_STOCK_IN;
 const STOCK_OUT = import.meta.env.VITE_STOCK_OUT;
 const baseUrl = import.meta.env.VITE_API_URL;
-const DEALER_CACHE_KEY = "bizflow.dealerCache.v1";
-const DEALER_CACHE_LIMIT = 20;
 const BILL_ITEMS_PAGE_SIZE = 6;
-
-function safeReadDealerCache() {
-  try {
-    const raw = localStorage.getItem(DEALER_CACHE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function persistDealerCache(cache) {
-  try {
-    localStorage.setItem(DEALER_CACHE_KEY, JSON.stringify(cache));
-  } catch {
-    // Ignore storage failures.
-  }
-}
 
 export function BillDetails({ setShowInvoice, setBillId }) {
   const { state, dispatch } = useBill();
@@ -41,9 +20,33 @@ export function BillDetails({ setShowInvoice, setBillId }) {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [createdInvoiceId, setCreatedInvoiceId] = useState(null);
   const [billItemsPage, setBillItemsPage] = useState(1);
-  const [cachedDealers, setCachedDealers] = useState(() =>
-    safeReadDealerCache(),
-  );
+
+  const dealersQuery = useQuery({
+    queryKey: ["dealers", state.invoice_type],
+    queryFn: () =>
+      requestJSON(
+        `${baseUrl}/dealers?invoice_type=${encodeURIComponent(state.invoice_type)}&limit=20`,
+      ),
+  });
+
+  const dealers = useMemo(() => {
+    return Array.isArray(dealersQuery.data?.result)
+      ? dealersQuery.data.result
+      : [];
+  }, [dealersQuery.data]);
+
+  const saveDealerMutation = useMutation({
+    mutationFn: (payload) =>
+      requestJSON(`${baseUrl}/dealers`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["dealers", state.invoice_type],
+      });
+    },
+  });
 
   useEffect(() => {
     const totalItems = state.invoice_items?.length || 0;
@@ -129,7 +132,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
   }
 
   function handleCreateAnotherBill() {
-    saveCurrentDealerToCache();
+    saveCurrentDealer({ silent: true });
     resetBillForm();
     setCreatedInvoiceId(null);
     setShowSuccessModal(false);
@@ -142,7 +145,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
       return;
     }
 
-    saveCurrentDealerToCache();
+    saveCurrentDealer({ silent: true });
     setBillId(createdInvoiceId);
     setShowSuccessModal(false);
     setCreatedInvoiceId(null);
@@ -170,28 +173,35 @@ export function BillDetails({ setShowInvoice, setBillId }) {
         };
   }
 
-  function saveCurrentDealerToCache() {
+  async function saveCurrentDealer({ silent = false } = {}) {
     const party = getCurrentPartyFields();
-    if (!party.name || !party.phone) return;
+    if (!party.name || !party.phone) {
+      if (!silent) {
+        setErrorModalMessage(
+          "Party name and phone are required to save dealer.",
+        );
+      }
+      return false;
+    }
 
-    const cacheId = `${party.name.toLowerCase()}::${party.phone.replace(/\s+/g, "")}`;
-
-    const next = [
-      {
-        id: cacheId,
+    try {
+      await saveDealerMutation.mutateAsync({
+        invoice_type: state.invoice_type,
         ...party,
-        updatedAt: Date.now(),
-      },
-      ...cachedDealers.filter((dealer) => dealer.id !== cacheId),
-    ].slice(0, DEALER_CACHE_LIMIT);
+      });
 
-    setCachedDealers(next);
-    persistDealerCache(next);
+      return true;
+    } catch (err) {
+      if (!silent) {
+        setErrorModalMessage(err?.message || "Failed to save dealer.");
+      }
+      return false;
+    }
   }
 
-  function handleSelectCachedDealer(selectedId) {
+  function handleSelectDealer(selectedId) {
     if (!selectedId) return;
-    const selected = cachedDealers.find((dealer) => dealer.id === selectedId);
+    const selected = dealers.find((dealer) => dealer.id === selectedId);
     if (!selected) return;
 
     dispatch({
@@ -574,10 +584,15 @@ export function BillDetails({ setShowInvoice, setBillId }) {
               <select
                 className="formEl"
                 defaultValue=""
-                onChange={(e) => handleSelectCachedDealer(e.target.value)}
+                onChange={(e) => handleSelectDealer(e.target.value)}
+                disabled={dealersQuery.isLoading}
               >
-                <option value="">Select dealer</option>
-                {cachedDealers.map((dealer) => (
+                <option value="">
+                  {dealersQuery.isLoading
+                    ? "Loading dealers..."
+                    : "Select dealer"}
+                </option>
+                {dealers.map((dealer) => (
                   <option key={dealer.id} value={dealer.id}>
                     {dealer.name} ({dealer.phone})
                   </option>
@@ -586,9 +601,10 @@ export function BillDetails({ setShowInvoice, setBillId }) {
               <button
                 type="button"
                 className="cache-dealer-btn"
-                onClick={saveCurrentDealerToCache}
+                onClick={() => saveCurrentDealer()}
+                disabled={saveDealerMutation.isPending}
               >
-                Save Dealer
+                {saveDealerMutation.isPending ? "Saving..." : "Save Dealer"}
               </button>
             </div>
           </div>
