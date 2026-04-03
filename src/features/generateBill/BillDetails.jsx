@@ -3,6 +3,7 @@ import { useBill } from "./hooks/useBill";
 import { ProductCard } from "../../ui/ProductCard.jsx";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router";
 import { requestJSON } from "../../styles/utils/requestJSON.js";
 import { PaginationComp } from "../../ui/PaginationComp.jsx";
 const STOCK_IN = import.meta.env.VITE_STOCK_IN;
@@ -34,19 +35,6 @@ export function BillDetails({ setShowInvoice, setBillId }) {
       ? dealersQuery.data.result
       : [];
   }, [dealersQuery.data]);
-
-  const saveDealerMutation = useMutation({
-    mutationFn: (payload) =>
-      requestJSON(`${baseUrl}/dealers`, {
-        method: "POST",
-        body: JSON.stringify(payload),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["dealers", state.invoice_type],
-      });
-    },
-  });
 
   useEffect(() => {
     const totalItems = state.invoice_items?.length || 0;
@@ -96,6 +84,11 @@ export function BillDetails({ setShowInvoice, setBillId }) {
     [estimatedBillAmount],
   );
 
+  const selectedDealer = useMemo(() => {
+    if (!state.dealer_id) return null;
+    return dealers.find((dealer) => dealer.id === state.dealer_id) || null;
+  }, [dealers, state.dealer_id]);
+
   // mamaJi data (This data Will come from user Profile in future, when user auth is implemented )
   const mamaJiDetails = {
     name: "V.S. Enterprises",
@@ -108,6 +101,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
       type: "SET_FIELDS",
       payload: {
         invoice_type: STOCK_OUT,
+        dealer_id: "",
         invoice_to: "",
         address_to: "",
         phone_to: "",
@@ -132,7 +126,6 @@ export function BillDetails({ setShowInvoice, setBillId }) {
   }
 
   function handleCreateAnotherBill() {
-    saveCurrentDealer({ silent: true });
     resetBillForm();
     setCreatedInvoiceId(null);
     setShowSuccessModal(false);
@@ -145,7 +138,6 @@ export function BillDetails({ setShowInvoice, setBillId }) {
       return;
     }
 
-    saveCurrentDealer({ silent: true });
     setBillId(createdInvoiceId);
     setShowSuccessModal(false);
     setCreatedInvoiceId(null);
@@ -153,54 +145,28 @@ export function BillDetails({ setShowInvoice, setBillId }) {
     setShowInvoice(true);
   }
 
-  function getCurrentPartyFields() {
-    return state.invoice_type === STOCK_OUT
-      ? {
-          name: String(state.invoice_to || "").trim(),
-          address: String(state.address_to || "").trim(),
-          phone: String(state.phone_to || "").trim(),
-          gst: String(state.other_party_gst || "")
-            .trim()
-            .toUpperCase(),
-        }
-      : {
-          name: String(state.invoice_from || "").trim(),
-          address: String(state.address_from || "").trim(),
-          phone: String(state.phone_from || "").trim(),
-          gst: String(state.other_party_gst || "")
-            .trim()
-            .toUpperCase(),
-        };
-  }
-
-  async function saveCurrentDealer({ silent = false } = {}) {
-    const party = getCurrentPartyFields();
-    if (!party.name || !party.phone) {
-      if (!silent) {
-        setErrorModalMessage(
-          "Party name and phone are required to save dealer.",
-        );
-      }
-      return false;
-    }
-
-    try {
-      await saveDealerMutation.mutateAsync({
-        invoice_type: state.invoice_type,
-        ...party,
+  function handleSelectDealer(selectedId) {
+    if (!selectedId) {
+      dispatch({
+        type: "SET_FIELDS",
+        payload: {
+          dealer_id: "",
+          invoice_to: state.invoice_type === STOCK_OUT ? "" : mamaJiDetails.name,
+          address_to:
+            state.invoice_type === STOCK_OUT ? "" : mamaJiDetails.address,
+          phone_to: state.invoice_type === STOCK_OUT ? "" : mamaJiDetails.phoneNo,
+          invoice_from: state.invoice_type === STOCK_OUT ? mamaJiDetails.name : "",
+          address_from:
+            state.invoice_type === STOCK_OUT ? mamaJiDetails.address : "",
+          phone_from:
+            state.invoice_type === STOCK_OUT ? mamaJiDetails.phoneNo : "",
+          other_party_gst: "",
+        },
       });
 
-      return true;
-    } catch (err) {
-      if (!silent) {
-        setErrorModalMessage(err?.message || "Failed to save dealer.");
-      }
-      return false;
+      return;
     }
-  }
 
-  function handleSelectDealer(selectedId) {
-    if (!selectedId) return;
     const selected = dealers.find((dealer) => dealer.id === selectedId);
     if (!selected) return;
 
@@ -209,12 +175,14 @@ export function BillDetails({ setShowInvoice, setBillId }) {
       payload:
         state.invoice_type === STOCK_OUT
           ? {
+              dealer_id: selected.id,
               invoice_to: selected.name || "",
               address_to: selected.address || "",
               phone_to: selected.phone || "",
               other_party_gst: selected.gst || "",
             }
           : {
+              dealer_id: selected.id,
               invoice_from: selected.name || "",
               address_from: selected.address || "",
               phone_from: selected.phone || "",
@@ -257,6 +225,13 @@ export function BillDetails({ setShowInvoice, setBillId }) {
       return;
     }
 
+    if (!state.dealer_id || !selectedDealer) {
+      setErrorModalMessage(
+        "Please select a dealer before generating the bill.",
+      );
+      return;
+    }
+
     const amount = Number(depositedAmount);
 
     if (!Number.isFinite(amount) || amount < 0) {
@@ -285,6 +260,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
       state.invoice_type === STOCK_OUT
         ? {
             invoice_type: STOCK_OUT,
+            dealer_id: state.dealer_id,
             invoice_to: state.invoice_to,
             address_to: state.address_to,
             phone_to: state.phone_to,
@@ -293,6 +269,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
           }
         : {
             invoice_type: STOCK_IN,
+            dealer_id: state.dealer_id,
             invoice_from: state.invoice_from,
             address_from: state.address_from,
             phone_from: state.phone_from,
@@ -365,6 +342,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
     await dispatch({
       type: "SET_FIELDS",
       payload: {
+          dealer_id: "",
         invoice_from: "",
         address_from: "",
         phone_from: "",
@@ -390,6 +368,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
       await dispatch({
         type: "SET_FIELDS",
         payload: {
+          dealer_id: "",
           invoice_from: mamaJiDetails.name,
           address_from: mamaJiDetails.address,
           phone_from: mamaJiDetails.phoneNo,
@@ -399,6 +378,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
       await dispatch({
         type: "SET_FIELDS",
         payload: {
+          dealer_id: "",
           invoice_to: mamaJiDetails.name,
           address_to: mamaJiDetails.address,
           phone_to: mamaJiDetails.phoneNo,
@@ -485,76 +465,65 @@ export function BillDetails({ setShowInvoice, setBillId }) {
           </div>
 
           <div className="form-el-container">
-            <span>Party Name</span>
-            <input
+            <span>Select Dealer</span>
+            <select
               className="formEl"
               required
-              type="text"
-              placeholder="e.g. arihant enterprises"
-              value={
-                state.invoice_type === STOCK_OUT
-                  ? state.invoice_to
-                  : state.invoice_from
-              }
-              onChange={(e) =>
-                dispatch({
-                  type: "SET_FIELDS",
-                  payload:
-                    state.invoice_type === STOCK_OUT
-                      ? { invoice_to: e.target.value }
-                      : { invoice_from: e.target.value },
-                })
-              }
-            />
+              value={state.dealer_id || ""}
+              onChange={(e) => handleSelectDealer(e.target.value)}
+              disabled={dealersQuery.isLoading || generateInvoiceMutation.isPending}
+            >
+              <option value="">
+                {dealersQuery.isLoading ? "Loading dealers..." : "Select dealer"}
+              </option>
+              {dealers.map((dealer) => (
+                <option key={dealer.id} value={dealer.id}>
+                  {dealer.name} ({dealer.phone})
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
+        {dealersQuery.isLoading ? null : dealers.length === 0 ? (
+          <div className="no-dealer-cta">
+            <p>
+              No dealers found for <strong>{state.invoice_type}</strong>. Add a
+              dealer first.
+            </p>
+            <Link className="go-dealers-link" to="/dealers">
+              Go to Dealers
+            </Link>
+          </div>
+        ) : null}
+
         <div className="form-sub-container">
           <div className="form-el-container">
-            <span>Party Address</span>
+            <span>Dealer Address</span>
             <input
               className="formEl"
-              required
+              readOnly
               type="text"
-              placeholder="e.g near navlakha road, indore"
+              placeholder="Auto-filled from selected dealer"
               value={
                 state.invoice_type === STOCK_OUT
                   ? state.address_to
                   : state.address_from
               }
-              onChange={(e) =>
-                dispatch({
-                  type: "SET_FIELDS",
-                  payload:
-                    state.invoice_type === STOCK_OUT
-                      ? { address_to: e.target.value }
-                      : { address_from: e.target.value },
-                })
-              }
             />
           </div>
 
           <div className="form-el-container">
-            <span>Party Phone No.</span>
+            <span>Dealer Phone No.</span>
             <input
               className="formEl"
-              required
-              type="number"
-              placeholder="e.g. XXXXX98260"
-              maxLength={10}
+              readOnly
+              type="text"
+              placeholder="Auto-filled from selected dealer"
               value={
                 state.invoice_type === STOCK_OUT
                   ? state.phone_to
                   : state.phone_from
-              }
-              onChange={(e) =>
-                dispatch({
-                  type: "SET_FIELDS",
-                  payload:
-                    state.invoice_type === STOCK_OUT
-                      ? { phone_to: e.target.value }
-                      : { phone_from: e.target.value },
-                })
               }
             />
           </div>
@@ -562,51 +531,14 @@ export function BillDetails({ setShowInvoice, setBillId }) {
 
         <div className="form-sub-container party-gst-row">
           <div className="form-el-container">
-            <span>Party GST No.</span>
+            <span>Dealer GST No.</span>
             <input
               className="formEl"
-              required
+              readOnly
               type="text"
-              placeholder="e.g. 27ABCDE1234F1Z5"
+              placeholder="Auto-filled from selected dealer"
               value={state.other_party_gst || ""}
-              onChange={(e) =>
-                dispatch({
-                  type: "SET_FIELDS",
-                  payload: { other_party_gst: e.target.value.toUpperCase() },
-                })
-              }
             />
-          </div>
-
-          <div className="form-el-container">
-            <span>Cached Dealers</span>
-            <div className="cache-dealer-controls">
-              <select
-                className="formEl"
-                defaultValue=""
-                onChange={(e) => handleSelectDealer(e.target.value)}
-                disabled={dealersQuery.isLoading}
-              >
-                <option value="">
-                  {dealersQuery.isLoading
-                    ? "Loading dealers..."
-                    : "Select dealer"}
-                </option>
-                {dealers.map((dealer) => (
-                  <option key={dealer.id} value={dealer.id}>
-                    {dealer.name} ({dealer.phone})
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                className="cache-dealer-btn"
-                onClick={() => saveCurrentDealer()}
-                disabled={saveDealerMutation.isPending}
-              >
-                {saveDealerMutation.isPending ? "Saving..." : "Save Dealer"}
-              </button>
-            </div>
           </div>
         </div>
 

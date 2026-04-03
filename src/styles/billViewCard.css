@@ -160,6 +160,14 @@
   font-size: 0.86rem;
 }
 
+.bill-dealer-btn {
+  background: linear-gradient(135deg, #8b5a2b 0%, #6f3f14 100%);
+}
+
+.bill-dealer-btn:hover {
+  box-shadow: 0 8px 16px rgba(111, 63, 20, 0.25);
+}
+
 .bill-state-chip {
   display: inline-flex;
   align-items: center;

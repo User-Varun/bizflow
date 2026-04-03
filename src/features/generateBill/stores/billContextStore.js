@@ -4,6 +4,7 @@ export const BillContext = createContext(null);
 
 export const initialState = {
   invoice_type: "stock_out", // credit
+  dealer_id: "",
 
   invoice_from: "",
   address_from: "",

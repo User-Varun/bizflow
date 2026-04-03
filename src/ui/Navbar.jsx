@@ -1,9 +1,10 @@
-import { Link, NavLink } from "react-router";
+import { NavLink } from "react-router";
 import "../styles/navbar.css";
 import {
   FaHome,
   FaBoxes,
   FaThLarge,
+  FaUsers,
   FaFileInvoiceDollar,
   FaReceipt,
 } from "react-icons/fa";
@@ -48,6 +49,17 @@ export function Navbar() {
           <div className="list-item-sub-container">
             <FaThLarge style={{ marginRight: 8 }} />
             <span>ProductCatalog</span>
+          </div>
+        </NavLink>
+        <NavLink
+          className={({ isActive }) =>
+            isActive ? "list-item nav-link-active" : "nav-link-inactive"
+          }
+          to="/dealers"
+        >
+          <div className="list-item-sub-container">
+            <FaUsers style={{ marginRight: 8 }} />
+            <span>Dealers</span>
           </div>
         </NavLink>
         <NavLink

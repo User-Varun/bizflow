@@ -8,6 +8,7 @@ export function BillViewCard({
   onPay,
   onUpdateDate,
   onEditInvoice,
+  onOpenDealer,
   isPaying,
   isUpdatingDate,
   isEditingInvoice,
@@ -232,6 +233,15 @@ export function BillViewCard({
           disabled={isEditingInvoice}
         >
           {isEditingInvoice ? "Saving..." : "Edit Invoice"}
+        </button>
+
+        <button
+          type="button"
+          className="bill-card-btn bill-dealer-btn"
+          onClick={onOpenDealer}
+          disabled={!res?.dealer_id || !res?.invoice_type}
+        >
+          View Dealer
         </button>
       </div>
     </div>
