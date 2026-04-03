@@ -7,8 +7,10 @@ export function BillViewCard({
   setId,
   onPay,
   onUpdateDate,
+  onEditInvoice,
   isPaying,
   isUpdatingDate,
+  isEditingInvoice,
 }) {
   const [amount, setAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
@@ -220,6 +222,15 @@ export function BillViewCard({
           }}
         >
           Open Invoice
+        </button>
+
+        <button
+          type="button"
+          className="bill-card-btn"
+          onClick={onEditInvoice}
+          disabled={isEditingInvoice}
+        >
+          {isEditingInvoice ? "Saving..." : "Edit Invoice"}
         </button>
       </div>
     </div>

@@ -589,7 +589,10 @@ export function BillDetails({ setShowInvoice, setBillId }) {
           </div>
         </div>
 
-        <div id="billItemsContainer" className="scroll-hide">
+        <div
+          id="billItemsContainer"
+          className={`scroll-hide ${state.invoice_items && state.invoice_items.length > 0 ? "" : "bill-items-empty"}`}
+        >
           {state.invoice_items && state.invoice_items.length > 0 ? (
             pagedInvoiceItems.map((item) => {
               return (

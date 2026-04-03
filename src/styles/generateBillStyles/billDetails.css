@@ -102,9 +102,16 @@
 #billItemsContainer .cardItem-in-bill-details .bill-details-remove-btn {
   margin-top: auto;
 }
+
+#billItemsContainer.bill-items-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .emptyContainerMsg {
   position: static;
-  margin: auto;
+  margin: 0;
   text-align: center;
 }
 

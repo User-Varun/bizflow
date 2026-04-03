@@ -3,6 +3,7 @@ import { BillViewCard } from "../ui/BillViewCard";
 import { PaginationComp } from "../ui/PaginationComp";
 import "../styles/viewBills.css";
 import { InvoiceTemplate } from "../ui/InvoiceTemplate";
+import { EditInvoiceModal } from "../ui/EditInvoiceModal";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { requestJSON } from "../styles/utils/requestJSON";
@@ -16,6 +17,8 @@ export function ViewBills() {
   const [searchFilter, setSearchFilter] = useState("invoice_number");
   const [billTypeFilter, setBillTypeFilter] = useState("all");
   const [id, setId] = useState(null);
+  const [editingInvoiceId, setEditingInvoiceId] = useState(null);
+  const [editInvoiceError, setEditInvoiceError] = useState("");
   const [showInvoice, setShowInvoice] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(8);
@@ -89,6 +92,64 @@ export function ViewBills() {
     },
   });
 
+  const invoiceToEditQuery = useQuery({
+    queryKey: ["invoiceToEdit", editingInvoiceId],
+    queryFn: () =>
+      requestJSON(`${baseUrl}/viewInvoices/${editingInvoiceId}`, {
+        method: "GET",
+      }),
+    enabled: Boolean(editingInvoiceId),
+    staleTime: 0,
+  });
+
+  const editSourceQuery = useQuery({
+    queryKey: [
+      "editInvoiceSourceItems",
+      editingInvoiceId,
+      invoiceToEditQuery.data?.result?.invoice_type,
+    ],
+    queryFn: async () => {
+      const invoiceType = invoiceToEditQuery.data?.result?.invoice_type;
+      const sourcePath = invoiceType === "stock_in" ? "productCatalog" : "inventory";
+
+      const response = await requestJSON(
+        `${baseUrl}/${sourcePath}?page=1&pageSize=200&search=`,
+        {
+          method: "GET",
+        },
+      );
+
+      const rows = response?.result || [];
+      if (invoiceType !== "stock_in") {
+        return rows.filter((item) => Number(item?.product_qty || 0) > 0);
+      }
+
+      return rows;
+    },
+    enabled:
+      Boolean(editingInvoiceId) &&
+      Boolean(invoiceToEditQuery.data?.result?.invoice_type),
+    staleTime: 30000,
+  });
+
+  const editInvoiceMutation = useMutation({
+    mutationFn: ({ id, payload }) =>
+      requestJSON(`${baseUrl}/viewInvoices/${id}/edit`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["viewInvoices"] });
+      queryClient.invalidateQueries({ queryKey: ["invoice"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      setEditInvoiceError("");
+      setEditingInvoiceId(null);
+    },
+    onError: (err) => {
+      setEditInvoiceError(err?.message || "Failed to update invoice.");
+    },
+  });
+
   function handleSearchChange(value) {
     setSearchQuery(value);
     setPage(1);
@@ -102,6 +163,17 @@ export function ViewBills() {
   function handleBillTypeFilterChange(value) {
     setBillTypeFilter(value);
     setPage(1);
+  }
+
+  function openEditInvoiceModal(invoiceId) {
+    setEditInvoiceError("");
+    setEditingInvoiceId(invoiceId);
+  }
+
+  function closeEditInvoiceModal() {
+    if (editInvoiceMutation.isPending) return;
+    setEditInvoiceError("");
+    setEditingInvoiceId(null);
   }
 
   if (error) {
@@ -181,6 +253,11 @@ export function ViewBills() {
                       updateInvoiceDateMutation.isPending &&
                       updateInvoiceDateMutation.variables?.id === res.id
                     }
+                    onEditInvoice={() => openEditInvoiceModal(res.id)}
+                    isEditingInvoice={
+                      editInvoiceMutation.isPending &&
+                      editInvoiceMutation.variables?.id === res.id
+                    }
                   />
                 );
               })
@@ -221,6 +298,23 @@ export function ViewBills() {
           backButtonLabel="Back to All Bills"
         />
       )}
+
+      <EditInvoiceModal
+        isOpen={Boolean(editingInvoiceId)}
+        onClose={closeEditInvoiceModal}
+        invoiceData={invoiceToEditQuery.data?.result || null}
+        sourceItems={editSourceQuery.data || []}
+        sourceLoading={editSourceQuery.isLoading || invoiceToEditQuery.isLoading}
+        isSaving={editInvoiceMutation.isPending}
+        errorMessage={editInvoiceError}
+        onSave={async (payload) => {
+          setEditInvoiceError("");
+          await editInvoiceMutation.mutateAsync({
+            id: editingInvoiceId,
+            payload,
+          });
+        }}
+      />
     </section>
   );
 }
