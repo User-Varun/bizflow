@@ -151,11 +151,14 @@ export function BillDetails({ setShowInvoice, setBillId }) {
         type: "SET_FIELDS",
         payload: {
           dealer_id: "",
-          invoice_to: state.invoice_type === STOCK_OUT ? "" : mamaJiDetails.name,
+          invoice_to:
+            state.invoice_type === STOCK_OUT ? "" : mamaJiDetails.name,
           address_to:
             state.invoice_type === STOCK_OUT ? "" : mamaJiDetails.address,
-          phone_to: state.invoice_type === STOCK_OUT ? "" : mamaJiDetails.phoneNo,
-          invoice_from: state.invoice_type === STOCK_OUT ? mamaJiDetails.name : "",
+          phone_to:
+            state.invoice_type === STOCK_OUT ? "" : mamaJiDetails.phoneNo,
+          invoice_from:
+            state.invoice_type === STOCK_OUT ? mamaJiDetails.name : "",
           address_from:
             state.invoice_type === STOCK_OUT ? mamaJiDetails.address : "",
           phone_from:
@@ -342,7 +345,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
     await dispatch({
       type: "SET_FIELDS",
       payload: {
-          dealer_id: "",
+        dealer_id: "",
         invoice_from: "",
         address_from: "",
         phone_from: "",
@@ -471,10 +474,14 @@ export function BillDetails({ setShowInvoice, setBillId }) {
               required
               value={state.dealer_id || ""}
               onChange={(e) => handleSelectDealer(e.target.value)}
-              disabled={dealersQuery.isLoading || generateInvoiceMutation.isPending}
+              disabled={
+                dealersQuery.isLoading || generateInvoiceMutation.isPending
+              }
             >
               <option value="">
-                {dealersQuery.isLoading ? "Loading dealers..." : "Select dealer"}
+                {dealersQuery.isLoading
+                  ? "Loading dealers..."
+                  : "Select dealer"}
               </option>
               {dealers.map((dealer) => (
                 <option key={dealer.id} value={dealer.id}>

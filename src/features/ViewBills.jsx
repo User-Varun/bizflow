@@ -271,7 +271,9 @@ export function ViewBills() {
               disabled={dealerOptionsQuery.isLoading}
             >
               <option value="">
-                {dealerOptionsQuery.isLoading ? "Loading dealers..." : "All Dealers"}
+                {dealerOptionsQuery.isLoading
+                  ? "Loading dealers..."
+                  : "All Dealers"}
               </option>
               {dealerOptions.map((dealer) => (
                 <option key={dealer.id} value={dealer.id}>

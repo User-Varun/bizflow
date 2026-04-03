@@ -116,7 +116,9 @@ export function DealerProfile() {
     onSuccess: () => {
       setErrorMessage("");
       setSuccessMessage("Dealer updated successfully.");
-      queryClient.invalidateQueries({ queryKey: ["dealer", invoiceType, dealerId] });
+      queryClient.invalidateQueries({
+        queryKey: ["dealer", invoiceType, dealerId],
+      });
       queryClient.invalidateQueries({ queryKey: ["dealers"] });
     },
     onError: (err) => {
@@ -131,7 +133,9 @@ export function DealerProfile() {
     setSuccessMessage("");
 
     const payload = {
-      invoice_type: String(formState.invoice_type || "").trim().toLowerCase(),
+      invoice_type: String(formState.invoice_type || "")
+        .trim()
+        .toLowerCase(),
       name: String(formState.name || "").trim(),
       phone: String(formState.phone || "")
         .replace(/\s+/g, "")
@@ -161,7 +165,9 @@ export function DealerProfile() {
   if (dealerQuery.error) {
     return (
       <section className="below-navbar-content-container dealer-profile-shell">
-        <h1>{dealerQuery.error?.message || "Failed to load dealer profile."}</h1>
+        <h1>
+          {dealerQuery.error?.message || "Failed to load dealer profile."}
+        </h1>
         <Link to="/dealers" className="dealer-profile-back-link">
           Back to Dealers
         </Link>
@@ -260,7 +266,9 @@ export function DealerProfile() {
           </label>
         </div>
 
-        {errorMessage ? <p className="dealer-profile-error">{errorMessage}</p> : null}
+        {errorMessage ? (
+          <p className="dealer-profile-error">{errorMessage}</p>
+        ) : null}
         {successMessage ? (
           <p className="dealer-profile-success">{successMessage}</p>
         ) : null}
@@ -323,10 +331,12 @@ export function DealerProfile() {
                     {new Date(invoice.createdAt).toLocaleDateString("en-GB")}
                   </p>
                   <p>
-                    <strong>Total:</strong> Rs. {Math.round(Number(invoice.grand_total || 0))}
+                    <strong>Total:</strong> Rs.{" "}
+                    {Math.round(Number(invoice.grand_total || 0))}
                   </p>
                   <p>
-                    <strong>Pending:</strong> Rs. {Math.round(Number(invoice.pending_amount || 0))}
+                    <strong>Pending:</strong> Rs.{" "}
+                    {Math.round(Number(invoice.pending_amount || 0))}
                   </p>
                 </article>
               ))}
@@ -356,7 +366,8 @@ export function DealerProfile() {
         <div className="dealer-history-header">
           <h2>Ledger</h2>
           <span className="dealer-history-chip">
-            {ledgerSummary?.ledger_kind || (dealerType === "stock_out" ? "receivable" : "payable")}
+            {ledgerSummary?.ledger_kind ||
+              (dealerType === "stock_out" ? "receivable" : "payable")}
           </span>
         </div>
 
@@ -366,15 +377,21 @@ export function DealerProfile() {
           <div className="ledger-summary-grid">
             <article className="ledger-summary-card">
               <span>Total Invoiced</span>
-              <strong>Rs. {Math.round(Number(ledgerSummary.total_invoiced || 0))}</strong>
+              <strong>
+                Rs. {Math.round(Number(ledgerSummary.total_invoiced || 0))}
+              </strong>
             </article>
             <article className="ledger-summary-card">
               <span>Total Paid</span>
-              <strong>Rs. {Math.round(Number(ledgerSummary.total_paid || 0))}</strong>
+              <strong>
+                Rs. {Math.round(Number(ledgerSummary.total_paid || 0))}
+              </strong>
             </article>
             <article className="ledger-summary-card">
               <span>Total Pending</span>
-              <strong>Rs. {Math.round(Number(ledgerSummary.total_pending || 0))}</strong>
+              <strong>
+                Rs. {Math.round(Number(ledgerSummary.total_pending || 0))}
+              </strong>
             </article>
             <article className="ledger-summary-card">
               <span>Invoices</span>
@@ -396,15 +413,19 @@ export function DealerProfile() {
                 <article key={row.row_id} className="ledger-statement-card">
                   <div className="dealer-history-row">
                     <h3>{row.invoice_number || "Invoice"}</h3>
-                    <span className={`dealer-bill-state ${row.row_type === "payment" ? "paid" : "partial"}`}>
+                    <span
+                      className={`dealer-bill-state ${row.row_type === "payment" ? "paid" : "partial"}`}
+                    >
                       {row.row_type}
                     </span>
                   </div>
                   <p>
-                    <strong>Amount:</strong> Rs. {Math.round(Number(row.amount || 0))}
+                    <strong>Amount:</strong> Rs.{" "}
+                    {Math.round(Number(row.amount || 0))}
                   </p>
                   <p>
-                    <strong>Running Balance:</strong> Rs. {Math.round(Number(row.running_balance || 0))}
+                    <strong>Running Balance:</strong> Rs.{" "}
+                    {Math.round(Number(row.running_balance || 0))}
                   </p>
                   <p>
                     <strong>Date:</strong>{" "}

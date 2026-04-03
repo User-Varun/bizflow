@@ -19,12 +19,12 @@ export const initialState = {
   sgst: "2.5",
 
   invoice_no: "",
-  total_amt : 0,
+  total_amt: 0,
   pending_amt: 0,
   pending_invoice: true,
 
   invoice_items: [],
- 
+
   isSubmitting: false,
 };
 

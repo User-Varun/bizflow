@@ -63,7 +63,9 @@ export function Dealers() {
   });
 
   const dealers = useMemo(() => {
-    return Array.isArray(dealersQuery.data?.result) ? dealersQuery.data.result : [];
+    return Array.isArray(dealersQuery.data?.result)
+      ? dealersQuery.data.result
+      : [];
   }, [dealersQuery.data]);
 
   const total = Number(dealersQuery.data?.meta?.total || 0);
@@ -122,7 +124,11 @@ export function Dealers() {
       </header>
 
       <section className="dealers-toolbar">
-        <div className="dealer-type-tabs" role="tablist" aria-label="Dealer type">
+        <div
+          className="dealer-type-tabs"
+          role="tablist"
+          aria-label="Dealer type"
+        >
           {DEALER_TYPES.map((type) => (
             <button
               key={type.value}
@@ -245,7 +251,9 @@ export function Dealers() {
           <div className="dealers-empty-state">
             <h2>No dealers found</h2>
             <p>
-              Add your first {activeType === "stock_out" ? "customer" : "supplier"} to start billing.
+              Add your first{" "}
+              {activeType === "stock_out" ? "customer" : "supplier"} to start
+              billing.
             </p>
             <button
               type="button"
