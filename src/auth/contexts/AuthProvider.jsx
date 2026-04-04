@@ -68,12 +68,45 @@ export function AuthProvider({ children }) {
     setSession(null);
   };
 
+  const updateTenantPaymentDetails = async (details) => {
+    const payload = await requestJSON(`${authBaseUrl}/tenant-payment-details`, {
+      method: "PATCH",
+      body: JSON.stringify(details),
+    });
+
+    setSession(payload.data);
+    return payload.data;
+  };
+
+  const updateMyProfile = async (details) => {
+    const payload = await requestJSON(`${authBaseUrl}/me`, {
+      method: "PATCH",
+      body: JSON.stringify(details),
+    });
+
+    setSession(payload.data);
+    return payload.data;
+  };
+
+  const updateTenantProfile = async (details) => {
+    const payload = await requestJSON(`${authBaseUrl}/tenant-profile`, {
+      method: "PATCH",
+      body: JSON.stringify(details),
+    });
+
+    setSession(payload.data);
+    return payload.data;
+  };
+
   const value = {
     session,
     loading,
     signIn,
     signUp,
     signOut,
+    updateTenantPaymentDetails,
+    updateMyProfile,
+    updateTenantProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -60,22 +60,58 @@
   background-color: #f8f7f6;
   padding: 1rem;
   border-radius: 0.4rem;
-  min-height: 9rem;
-  max-height: none;
-  display: flex;
-  flex-wrap: wrap;
+  min-height: 16rem;
+  max-height: 34rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem;
   border-width: 1px;
   border-color: #ebe6e0;
-  align-items: flex-start;
-  align-content: flex-start;
-  justify-content: flex-start;
-  overflow: visible;
+  align-items: stretch;
+  align-content: start;
+  justify-content: stretch;
+  overflow-y: auto;
+  overflow-x: hidden;
   position: relative;
 }
+
+#billItemsContainer .cardItem-in-bill-details {
+  width: 100% !important;
+  min-height: 12.5rem !important;
+  height: auto !important;
+  padding: 0.8rem !important;
+  gap: 0.7rem !important;
+}
+
+#billItemsContainer .cardItem-in-bill-details .compact-card-content {
+  gap: 0.65rem;
+}
+
+#billItemsContainer .cardItem-in-bill-details .product-compact-name {
+  font-size: 0.98rem;
+}
+
+#billItemsContainer .cardItem-in-bill-details .product-compact-brand {
+  font-size: 0.8rem;
+}
+
+#billItemsContainer .cardItem-in-bill-details .product-compact-chip {
+  font-size: 0.78rem;
+}
+
+#billItemsContainer .cardItem-in-bill-details .bill-details-remove-btn {
+  margin-top: auto;
+}
+
+#billItemsContainer.bill-items-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .emptyContainerMsg {
   position: static;
-  margin: auto;
+  margin: 0;
   text-align: center;
 }
 
@@ -87,6 +123,18 @@
 }
 
 .form-sub-container > p {
+  margin: 0;
+  font-weight: 700;
+  color: #2f2f2f;
+}
+
+.bill-total-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.bill-total-summary p {
   margin: 0;
   font-weight: 700;
   color: #2f2f2f;
@@ -200,6 +248,34 @@
 
 .cache-dealer-btn:hover {
   background: #e6edf6;
+}
+
+.no-dealer-cta {
+  border: 1px dashed #d6bca8;
+  background: #fff8f1;
+  border-radius: 10px;
+  padding: 0.75rem 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.no-dealer-cta p {
+  margin: 0;
+  color: #5a3f2f;
+  font-weight: 600;
+}
+
+.go-dealers-link {
+  text-decoration: none;
+  border: 1px solid #cda889;
+  background: #fdf2e7;
+  color: #6b3f1f;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 0.4rem 0.7rem;
 }
 
 .bill-error-modal-overlay {
@@ -328,6 +404,17 @@
   .formEl,
   .formEl2 {
     width: 100%;
+  }
+
+  #billItemsContainer {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  #billItemsContainer {
+    grid-template-columns: 1fr;
+    max-height: 28rem;
   }
 }
 

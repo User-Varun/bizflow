@@ -17,8 +17,9 @@ export function SearchItems() {
   // Load defaults on mount/invoice_type change
   const [searchQuery, setSearchQuery] = useState("");
   const normalizedSearch = searchQuery.trim();
-  const isStockOut = state.invoice_type === "stock_out";
-  const sourcePath = isStockOut ? "inventory" : "productCatalog";
+  const isStockIn = state.invoice_type === "stock_in";
+  const sourcePath = isStockIn ? "productCatalog" : "inventory";
+  const selectedDealerId = String(state.dealer_id || "").trim();
 
   const {
     data: products = [],
@@ -28,20 +29,25 @@ export function SearchItems() {
   } = useQuery({
     queryKey: [
       "generateInvoiceSearchItems",
-      { invoiceType: state.invoice_type, search: normalizedSearch },
+      {
+        invoiceType: state.invoice_type,
+        search: normalizedSearch,
+        dealerId: selectedDealerId,
+      },
     ],
     queryFn: () =>
       requestJSON(
-        `${baseUrl}/${sourcePath}?page=1&pageSize=200&search=${encodeURIComponent(normalizedSearch)}`,
+        `${baseUrl}/${sourcePath}?page=1&pageSize=200&search=${encodeURIComponent(normalizedSearch)}${isStockIn ? `&dealer_id=${encodeURIComponent(selectedDealerId)}` : ""}`,
         {
           method: "GET",
         },
       ),
+    enabled: !isStockIn || Boolean(selectedDealerId),
     select: (payload) => {
       const items = payload?.result ?? [];
 
       // For stock_out, show only inventory rows that still have quantity.
-      if (isStockOut) {
+      if (!isStockIn) {
         return items.filter((item) => Number(item?.product_qty || 0) > 0);
       }
 
@@ -53,7 +59,7 @@ export function SearchItems() {
   if (isLoading) {
     return (
       <LoadingSpinner
-        label={isStockOut ? "Loading inventory..." : "Loading products..."}
+        label={isStockIn ? "Loading products..." : "Loading inventory..."}
       />
     );
   }
@@ -66,15 +72,19 @@ export function SearchItems() {
     <section id="searchFeatureContainer">
       <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
       <div id="searchItemsContainer" className="scroll-hide">
+        {isStockIn && !selectedDealerId ? (
+          <h1>Select a supplier dealer to load products.</h1>
+        ) : null}
+
         {products.length > 0 ? (
           products.map((res) => {
             return <BillCardItem res={res} key={res.id || res.name} />;
           })
-        ) : (
+        ) : !isStockIn || selectedDealerId ? (
           <h1>
-            {isStockOut ? "No inventory items found!" : "No products found!"}
+            {isStockIn ? "No products found!" : "No inventory items found!"}
           </h1>
-        )}
+        ) : null}
       </div>
     </section>
   );

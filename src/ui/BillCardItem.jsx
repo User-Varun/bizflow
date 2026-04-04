@@ -1,30 +1,64 @@
 import { useRef } from "react";
 import { useBill } from "../features/generateBill/hooks/useBill";
 import { useSearchItems } from "../features/generateBill/hooks/useSearchItems";
+import {
+  formatCurrencyAmount,
+  toFixedTwo,
+  normalizeTaxPercent,
+} from "../lib/formatters";
 import "../styles/productCard.css";
 
 export function BillCardItem({ res }) {
   const rateElRef = useRef(null);
   const discountElRef = useRef(null);
 
+  const mrp = Number(res?.mrp ?? 0);
+  const safeMrp = Number.isFinite(mrp) ? mrp : 0;
+  const baseRate = Number(res?.rate ?? res?.mrp ?? 0);
+  const safeBaseRate = Number.isFinite(baseRate) ? baseRate : 0;
+
   const { state: searchItemsState, dispatch: searchItemsDispatch } =
     useSearchItems();
   const { state: billState, dispatch: billDispatch } = useBill();
+  const isStockIn = billState.invoice_type === "stock_in";
+  const isStockOut = billState.invoice_type === "stock_out";
+  const inventoryQty = Number(res?.product_qty || 0);
+  const showInventoryQty =
+    (isStockIn || isStockOut) && Number.isFinite(inventoryQty);
 
   function handleAddItem(e) {
     e.preventDefault();
 
     let billToUpdate;
-    const id = e.target.dataset.id; // get will get data attribute named "data-id"
-    const qty = searchItemsState.quantities?.[id] || 0;
+    const id = String(e.currentTarget.dataset.id || res?.id || "").trim();
+    if (!id) return;
+
+    const resolvedProductCatalogId = isStockIn
+      ? String(res?.product_catalog_id || res?.id || "").trim() || null
+      : String(res?.product_catalog_id || "").trim() || null;
+    const qty = Number(searchItemsState.quantities?.[id] || 0);
+    const rawRate = searchItemsState.rate?.[id];
+    const hasExplicitRate =
+      rawRate !== undefined &&
+      rawRate !== null &&
+      String(rawRate).trim() !== "";
+    const parsedExplicitRate = Number(rawRate);
+    const safeRate =
+      hasExplicitRate && Number.isFinite(parsedExplicitRate)
+        ? parsedExplicitRate
+        : safeBaseRate;
     const discountInput = Number(searchItemsState.discount?.[id] ?? 0);
     const safeDiscount = Number.isFinite(discountInput)
       ? Math.max(0, Math.min(100, discountInput))
       : 0;
+    const safeCgst = normalizeTaxPercent(searchItemsState.cgst?.[id], 2.5);
+    const safeSgst = normalizeTaxPercent(searchItemsState.sgst?.[id], 2.5);
 
     if (qty <= 0) return; // nothing to add
 
-    const exits = billState.invoice_items.find((item) => item.id == id);
+    const exits = billState.invoice_items.find(
+      (item) => String(item.id || "").trim() === id,
+    );
 
     if (exits) {
       // update existing item's property
@@ -33,9 +67,13 @@ export function BillCardItem({ res }) {
         return item.id === id
           ? {
               ...item,
+              product_catalog_id:
+                item.product_catalog_id || resolvedProductCatalogId,
               item_qty: (item.item_qty || 0) + qty,
-              rate: Number(searchItemsState.rate[id]),
+              rate: safeRate,
               discount: safeDiscount,
+              cgst: safeCgst,
+              sgst: safeSgst,
             }
           : item;
       });
@@ -51,9 +89,12 @@ export function BillCardItem({ res }) {
         ...billState.invoice_items,
         {
           ...res,
+          product_catalog_id: resolvedProductCatalogId,
           item_qty: qty,
-          rate: Number(searchItemsState.rate[id]),
+          rate: safeRate,
           discount: safeDiscount,
+          cgst: safeCgst,
+          sgst: safeSgst,
         },
       ];
 
@@ -64,10 +105,24 @@ export function BillCardItem({ res }) {
     }
 
     // reset the selected qty for this product only
-    searchItemsDispatch({ type: "RESET_QTY", payload: { id: res.id } });
-    searchItemsDispatch({ type: "RESET_RATE", payload: { id: res.id } });
-    searchItemsDispatch({ type: "RESET_DISCOUNT", payload: { id: res.id } });
+    searchItemsDispatch({ type: "RESET_QTY", payload: { id } });
+    searchItemsDispatch({ type: "RESET_RATE", payload: { id } });
+    searchItemsDispatch({
+      type: "RESET_PURCHASE_RATE_PERCENT",
+      payload: { id },
+    });
+    searchItemsDispatch({ type: "RESET_DISCOUNT", payload: { id } });
+    searchItemsDispatch({ type: "RESET_CGST", payload: { id } });
+    searchItemsDispatch({ type: "RESET_SGST", payload: { id } });
   }
+
+  const manualRate = searchItemsState.rate?.[res.id];
+  const displayRateValue =
+    manualRate === "" || manualRate == null ? safeBaseRate : manualRate;
+  const purchasePercentValue = searchItemsState.purchaseRatePercent?.[res.id];
+  const discountValue = searchItemsState.discount?.[res.id];
+  const cgstValue = searchItemsState.cgst?.[res.id];
+  const sgstValue = searchItemsState.sgst?.[res.id];
 
   return (
     <div className="cardItem bill-item-card" key={res.id || res.name}>
@@ -75,15 +130,30 @@ export function BillCardItem({ res }) {
         <div className="bill-item-name-wrap">
           <span className="bill-item-name">{res.name}</span>
         </div>
-        <span className="bill-item-price">₹{res.mrp}</span>
+        <div className="bill-item-price-stack">
+          <span className="bill-item-price">
+            MRP: {formatCurrencyAmount(safeMrp)}
+          </span>
+          <span className="bill-item-rate-secondary">
+            Rate: {formatCurrencyAmount(safeBaseRate)}
+          </span>
+        </div>
       </div>
 
       <div className="bill-item-meta-row">
         <span className="bill-item-brand">{res.brand}</span>
         <span className="bill-item-unit-pill">
-          {res.unit_qty} {res.unit_name}
+          {toFixedTwo(res.unit_qty)} {res.unit_name}
         </span>
       </div>
+
+      {showInventoryQty && (
+        <div className="bill-item-inventory-row">
+          <span className="bill-item-inventory-pill">
+            In stock: {toFixedTwo(inventoryQty)}
+          </span>
+        </div>
+      )}
 
       <div className="cardSubContainer">
         <div className="itemCounterContainer">
@@ -98,9 +168,30 @@ export function BillCardItem({ res }) {
           >
             -
           </button>
-          <span className="itemContainerField">
-            {searchItemsState.quantities[res.id] || 0}
-          </span>
+          <input
+            className="itemContainerField itemContainerInput"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="0"
+            value={searchItemsState.quantities?.[res.id] ?? ""}
+            onFocus={(e) => e.target.select()}
+            onChange={(e) =>
+              searchItemsDispatch({
+                type: "SET_QTY",
+                payload: { id: res.id, qty: e.target.value },
+              })
+            }
+            onBlur={(e) =>
+              searchItemsDispatch({
+                type: "SET_QTY",
+                payload: {
+                  id: res.id,
+                  qty: toFixedTwo(e.target.value, 0, { clampMin: 0 }),
+                },
+              })
+            }
+          />
           <button
             className="itemContainerBtn"
             onClick={() =>
@@ -114,43 +205,207 @@ export function BillCardItem({ res }) {
           </button>
         </div>
 
-        <div className="bill-price-controls">
-          <input
-            ref={rateElRef}
-            type="number"
-            placeholder="Rate"
-            value={searchItemsState.rate?.[res.id] ?? ""}
-            onChange={(e) =>
-              searchItemsDispatch({
-                type: "SET_RATE",
-                payload: { id: res.id, inputFieldValue: e.target.value },
-              })
-            }
-            onMouseLeave={() => {
-              if (rateElRef.current) rateElRef.current.blur(); // Remove focus from the input
-            }}
-            className="rate-input"
-          />
+        <div
+          className={`bill-price-controls ${isStockIn ? "bill-price-controls-stock-in" : ""}`}
+        >
+          {!isStockIn ? (
+            <label className="bill-field-row">
+              <span className="bill-field-label">Purchase %</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0"
+                value={
+                  purchasePercentValue === undefined ? 0 : purchasePercentValue
+                }
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => {
+                  const rawPercent = e.target.value;
 
-          <input
-            ref={discountElRef}
-            type="number"
-            min="0"
-            max="100"
-            step="0.01"
-            placeholder="Disc %"
-            value={searchItemsState.discount?.[res.id] ?? ""}
-            onChange={(e) =>
-              searchItemsDispatch({
-                type: "SET_DISCOUNT",
-                payload: { id: res.id, inputFieldValue: e.target.value },
-              })
-            }
-            onMouseLeave={() => {
-              if (discountElRef.current) discountElRef.current.blur();
-            }}
-            className="rate-input discount-input"
-          />
+                  searchItemsDispatch({
+                    type: "SET_PURCHASE_RATE_PERCENT",
+                    payload: { id: res.id, inputFieldValue: rawPercent },
+                  });
+
+                  if (rawPercent === "") {
+                    searchItemsDispatch({
+                      type: "SET_RATE",
+                      payload: {
+                        id: res.id,
+                        inputFieldValue: safeBaseRate,
+                      },
+                    });
+                    return;
+                  }
+
+                  const percent = Number(rawPercent);
+                  if (!Number.isFinite(percent) || percent < 0) return;
+
+                  const computedRate = safeBaseRate * (1 + percent / 100);
+                  searchItemsDispatch({
+                    type: "SET_RATE",
+                    payload: {
+                      id: res.id,
+                      inputFieldValue: toFixedTwo(computedRate),
+                    },
+                  });
+                }}
+                onBlur={(e) => {
+                  const formattedPercent = toFixedTwo(e.target.value, 0, {
+                    clampMin: 0,
+                  });
+
+                  searchItemsDispatch({
+                    type: "SET_PURCHASE_RATE_PERCENT",
+                    payload: { id: res.id, inputFieldValue: formattedPercent },
+                  });
+
+                  const percent = Number(formattedPercent);
+                  const computedRate = safeBaseRate * (1 + percent / 100);
+                  searchItemsDispatch({
+                    type: "SET_RATE",
+                    payload: {
+                      id: res.id,
+                      inputFieldValue: toFixedTwo(computedRate),
+                    },
+                  });
+                }}
+                className="rate-input purchase-rate-input"
+              />
+            </label>
+          ) : null}
+
+          <label className="bill-field-row">
+            <span className="bill-field-label">Rate</span>
+            <input
+              ref={rateElRef}
+              type="number"
+              placeholder="Rate"
+              value={displayRateValue}
+              onChange={(e) =>
+                searchItemsDispatch({
+                  type: "SET_RATE",
+                  payload: { id: res.id, inputFieldValue: e.target.value },
+                })
+              }
+              onBlur={(e) => {
+                searchItemsDispatch({
+                  type: "SET_RATE",
+                  payload: {
+                    id: res.id,
+                    inputFieldValue: toFixedTwo(e.target.value, safeBaseRate, {
+                      clampMin: 0,
+                    }),
+                  },
+                });
+              }}
+              onMouseLeave={() => {
+                if (rateElRef.current) rateElRef.current.blur(); // Remove focus from the input
+              }}
+              className="rate-input"
+            />
+          </label>
+
+          <label className="bill-field-row">
+            <span className="bill-field-label">Discount %</span>
+            <input
+              ref={discountElRef}
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              placeholder="0"
+              value={discountValue === undefined ? 0 : discountValue}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) =>
+                searchItemsDispatch({
+                  type: "SET_DISCOUNT",
+                  payload: { id: res.id, inputFieldValue: e.target.value },
+                })
+              }
+              onBlur={(e) => {
+                searchItemsDispatch({
+                  type: "SET_DISCOUNT",
+                  payload: {
+                    id: res.id,
+                    inputFieldValue: toFixedTwo(e.target.value, 0, {
+                      clampMin: 0,
+                      clampMax: 100,
+                    }),
+                  },
+                });
+              }}
+              onMouseLeave={() => {
+                if (discountElRef.current) discountElRef.current.blur();
+              }}
+              className="rate-input discount-input"
+            />
+          </label>
+
+          <label className="bill-field-row">
+            <span className="bill-field-label">CGST %</span>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              placeholder="2.5"
+              value={cgstValue === undefined ? 2.5 : cgstValue}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) =>
+                searchItemsDispatch({
+                  type: "SET_CGST",
+                  payload: { id: res.id, inputFieldValue: e.target.value },
+                })
+              }
+              onBlur={(e) =>
+                searchItemsDispatch({
+                  type: "SET_CGST",
+                  payload: {
+                    id: res.id,
+                    inputFieldValue: toFixedTwo(e.target.value, 2.5, {
+                      clampMin: 0,
+                      clampMax: 100,
+                    }),
+                  },
+                })
+              }
+              className="rate-input tax-input"
+            />
+          </label>
+
+          <label className="bill-field-row">
+            <span className="bill-field-label">SGST %</span>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              placeholder="2.5"
+              value={sgstValue === undefined ? 2.5 : sgstValue}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) =>
+                searchItemsDispatch({
+                  type: "SET_SGST",
+                  payload: { id: res.id, inputFieldValue: e.target.value },
+                })
+              }
+              onBlur={(e) =>
+                searchItemsDispatch({
+                  type: "SET_SGST",
+                  payload: {
+                    id: res.id,
+                    inputFieldValue: toFixedTwo(e.target.value, 2.5, {
+                      clampMin: 0,
+                      clampMax: 100,
+                    }),
+                  },
+                })
+              }
+              className="rate-input tax-input"
+            />
+          </label>
         </div>
       </div>
       <button

@@ -12,7 +12,10 @@ export function GenerateBill() {
   const [billId, setBillId] = useState(null);
 
   return (
-    <section id="generateBillContainer">
+    <section
+      id="generateBillContainer"
+      className={showInvoice ? "generate-bill-invoice-view" : ""}
+    >
       {showInvoice ? (
         <InvoiceTemplate
           id={billId}

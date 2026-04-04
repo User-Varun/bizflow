@@ -4,6 +4,7 @@ export const BillContext = createContext(null);
 
 export const initialState = {
   invoice_type: "stock_out", // credit
+  dealer_id: "",
 
   invoice_from: "",
   address_from: "",
@@ -14,16 +15,13 @@ export const initialState = {
   phone_to: "",
   other_party_gst: "",
 
-  cgst: "2.5",
-  sgst: "2.5",
-
   invoice_no: "",
-  total_amt : 0,
+  total_amt: 0,
   pending_amt: 0,
   pending_invoice: true,
 
   invoice_items: [],
- 
+
   isSubmitting: false,
 };
 

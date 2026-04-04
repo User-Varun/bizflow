@@ -7,6 +7,8 @@ import { Navbar } from "./ui/Navbar";
 import { Dashboard } from "./features/Dashboard";
 import { Inventory } from "./features/Inventory";
 import { ProductCatalog } from "./features/ProductCatalog";
+import { Dealers } from "./features/Dealers";
+import { DealerProfile } from "./features/DealerProfile";
 import { GenerateBill } from "./features/generateBill/GenerateBill";
 import { BillProvider } from "./features/generateBill/contexts/billContext";
 import { SearchItemsProvider } from "./features/generateBill/contexts/searchItemsContext";
@@ -54,6 +56,8 @@ const router = createBrowserRouter([
       // { index: true, Component: Inventory },
       { path: "inventory", element: <Inventory /> },
       { path: "productCatalog", element: <ProductCatalog /> },
+      { path: "dealers", element: <Dealers /> },
+      { path: "dealers/:invoiceType/:dealerId", element: <DealerProfile /> },
       {
         path: "generateBill",
         element: (

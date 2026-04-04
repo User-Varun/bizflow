@@ -1,6 +1,11 @@
 import "../styles/searchBar.css";
 
-export function SearchBar({ widthInPercent, searchQuery, setSearchQuery }) {
+export function SearchBar({
+  widthInPercent,
+  searchQuery,
+  setSearchQuery,
+  placeholder = "Search Products",
+}) {
   return (
     <div
       id="searchBarContainer"
@@ -9,7 +14,7 @@ export function SearchBar({ widthInPercent, searchQuery, setSearchQuery }) {
       <input
         type="text"
         id="inputEl"
-        placeholder="Search Products"
+        placeholder={placeholder}
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
       />

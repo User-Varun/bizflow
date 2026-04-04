@@ -1,70 +1,100 @@
 import "../../styles/generateBillStyles/billDetails.css";
 import { useBill } from "./hooks/useBill";
 import { ProductCard } from "../../ui/ProductCard.jsx";
-import { useMemo, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router";
 import { requestJSON } from "../../styles/utils/requestJSON.js";
+import { PaginationComp } from "../../ui/PaginationComp.jsx";
+import {
+  formatCurrencyAmount,
+  formatSignedCurrencyAmount,
+  toFixedTwo,
+} from "../../lib/formatters";
 const STOCK_IN = import.meta.env.VITE_STOCK_IN;
 const STOCK_OUT = import.meta.env.VITE_STOCK_OUT;
 const baseUrl = import.meta.env.VITE_API_URL;
-const DEALER_CACHE_KEY = "bizflow.dealerCache.v1";
-const DEALER_CACHE_LIMIT = 20;
-
-function safeReadDealerCache() {
-  try {
-    const raw = localStorage.getItem(DEALER_CACHE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function persistDealerCache(cache) {
-  try {
-    localStorage.setItem(DEALER_CACHE_KEY, JSON.stringify(cache));
-  } catch {
-    // Ignore storage failures.
-  }
-}
+const BILL_ITEMS_PAGE_SIZE = 6;
 
 export function BillDetails({ setShowInvoice, setBillId }) {
   const { state, dispatch } = useBill();
   const queryClient = useQueryClient();
   const [depositedAmount, setDepositedAmount] = useState("0");
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [manualInvoiceDate, setManualInvoiceDate] = useState("");
   const [errorModalMessage, setErrorModalMessage] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [createdInvoiceId, setCreatedInvoiceId] = useState(null);
-  const [cachedDealers, setCachedDealers] = useState(() =>
-    safeReadDealerCache(),
-  );
+  const [billItemsPage, setBillItemsPage] = useState(1);
 
-  const totalAmount = useMemo(() => {
-    return state.invoice_items.reduce(
-      (acc, item) => acc + Number(item.rate || 0) * Number(item.item_qty || 0),
-      0,
+  const dealersQuery = useQuery({
+    queryKey: ["dealers", state.invoice_type],
+    queryFn: () =>
+      requestJSON(
+        `${baseUrl}/dealers?invoice_type=${encodeURIComponent(state.invoice_type)}&limit=20`,
+      ),
+  });
+
+  const dealers = useMemo(() => {
+    return Array.isArray(dealersQuery.data?.result)
+      ? dealersQuery.data.result
+      : [];
+  }, [dealersQuery.data]);
+
+  useEffect(() => {
+    const totalItems = state.invoice_items?.length || 0;
+    const totalPages = Math.max(
+      1,
+      Math.ceil(totalItems / BILL_ITEMS_PAGE_SIZE),
+    );
+
+    if (billItemsPage > totalPages) {
+      setBillItemsPage(totalPages);
+    }
+  }, [state.invoice_items, billItemsPage]);
+
+  const pagedInvoiceItems = useMemo(() => {
+    const start = (billItemsPage - 1) * BILL_ITEMS_PAGE_SIZE;
+    const end = start + BILL_ITEMS_PAGE_SIZE;
+    return (state.invoice_items || []).slice(start, end);
+  }, [state.invoice_items, billItemsPage]);
+
+  const estimatedBillAmount = useMemo(() => {
+    return Number(
+      state.invoice_items
+        .reduce((acc, item) => {
+          const baseAmount =
+            Number(item.rate || 0) * Number(item.item_qty || 0);
+          const discountPercent = Math.max(
+            0,
+            Math.min(100, Number(item.discount || 0)),
+          );
+          const discountValue = (baseAmount * discountPercent) / 100;
+          const taxableAmount = Math.max(0, baseAmount - discountValue);
+          const cgstAmount = (taxableAmount * Number(item.cgst || 0)) / 100;
+          const sgstAmount = (taxableAmount * Number(item.sgst || 0)) / 100;
+
+          return acc + taxableAmount + cgstAmount + sgstAmount;
+        }, 0)
+        .toFixed(2),
     );
   }, [state.invoice_items]);
 
-  const discountAmount = useMemo(() => {
-    return state.invoice_items.reduce((acc, item) => {
-      const baseAmount = Number(item.rate || 0) * Number(item.item_qty || 0);
-      const discountPercent = Number(item.discount || 0);
+  const roundedEstimatedBillAmount = useMemo(
+    () => Math.round(Number(estimatedBillAmount || 0)),
+    [estimatedBillAmount],
+  );
 
-      return acc + (baseAmount * discountPercent) / 100;
-    }, 0);
-  }, [state.invoice_items]);
+  const roundOffAmount = useMemo(() => {
+    const rounded = Number(roundedEstimatedBillAmount || 0);
+    const exact = Number(estimatedBillAmount || 0);
+    return Number((rounded - exact).toFixed(2));
+  }, [roundedEstimatedBillAmount, estimatedBillAmount]);
 
-  const estimatedBillAmount = useMemo(() => {
-    const cgst = Number(state.cgst || 0);
-    const sgst = Number(state.sgst || 0);
-    const taxPercent = cgst + sgst;
-    const taxAmount = (totalAmount * taxPercent) / 100;
-
-    return Number((totalAmount + taxAmount - discountAmount).toFixed(2));
-  }, [totalAmount, discountAmount, state.cgst, state.sgst]);
+  const selectedDealer = useMemo(() => {
+    if (!state.dealer_id) return null;
+    return dealers.find((dealer) => dealer.id === state.dealer_id) || null;
+  }, [dealers, state.dealer_id]);
 
   // mamaJi data (This data Will come from user Profile in future, when user auth is implemented )
   const mamaJiDetails = {
@@ -78,6 +108,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
       type: "SET_FIELDS",
       payload: {
         invoice_type: STOCK_OUT,
+        dealer_id: "",
         invoice_to: "",
         address_to: "",
         phone_to: "",
@@ -85,8 +116,6 @@ export function BillDetails({ setShowInvoice, setBillId }) {
         invoice_from: mamaJiDetails.name,
         address_from: mamaJiDetails.address,
         phone_from: mamaJiDetails.phoneNo,
-        cgst: "2.5",
-        sgst: "2.5",
         invoice_items: [],
         invoice_no: "",
         total_amt: 0,
@@ -97,10 +126,11 @@ export function BillDetails({ setShowInvoice, setBillId }) {
 
     setDepositedAmount("0");
     setPaymentMethod("cash");
+    setManualInvoiceDate("");
+    setBillItemsPage(1);
   }
 
   function handleCreateAnotherBill() {
-    saveCurrentDealerToCache();
     resetBillForm();
     setCreatedInvoiceId(null);
     setShowSuccessModal(false);
@@ -113,7 +143,6 @@ export function BillDetails({ setShowInvoice, setBillId }) {
       return;
     }
 
-    saveCurrentDealerToCache();
     setBillId(createdInvoiceId);
     setShowSuccessModal(false);
     setCreatedInvoiceId(null);
@@ -121,67 +150,69 @@ export function BillDetails({ setShowInvoice, setBillId }) {
     setShowInvoice(true);
   }
 
-  function getCurrentPartyFields() {
-    return state.invoice_type === STOCK_OUT
-      ? {
-          name: String(state.invoice_to || "").trim(),
-          address: String(state.address_to || "").trim(),
-          phone: String(state.phone_to || "").trim(),
-          gst: String(state.other_party_gst || "")
-            .trim()
-            .toUpperCase(),
-        }
-      : {
-          name: String(state.invoice_from || "").trim(),
-          address: String(state.address_from || "").trim(),
-          phone: String(state.phone_from || "").trim(),
-          gst: String(state.other_party_gst || "")
-            .trim()
-            .toUpperCase(),
-        };
-  }
+  function handleSelectDealer(selectedId) {
+    if (!selectedId) {
+      dispatch({
+        type: "SET_FIELDS",
+        payload: {
+          dealer_id: "",
+          invoice_to:
+            state.invoice_type === STOCK_OUT ? "" : mamaJiDetails.name,
+          address_to:
+            state.invoice_type === STOCK_OUT ? "" : mamaJiDetails.address,
+          phone_to:
+            state.invoice_type === STOCK_OUT ? "" : mamaJiDetails.phoneNo,
+          invoice_from:
+            state.invoice_type === STOCK_OUT ? mamaJiDetails.name : "",
+          address_from:
+            state.invoice_type === STOCK_OUT ? mamaJiDetails.address : "",
+          phone_from:
+            state.invoice_type === STOCK_OUT ? mamaJiDetails.phoneNo : "",
+          other_party_gst: "",
+          ...(state.invoice_type === STOCK_IN ? { invoice_items: [] } : {}),
+        },
+      });
 
-  function saveCurrentDealerToCache() {
-    const party = getCurrentPartyFields();
-    if (!party.name || !party.phone) return;
+      if (state.invoice_type === STOCK_IN) {
+        setBillItemsPage(1);
+      }
 
-    const cacheId = `${party.name.toLowerCase()}::${party.phone.replace(/\s+/g, "")}`;
+      return;
+    }
 
-    const next = [
-      {
-        id: cacheId,
-        ...party,
-        updatedAt: Date.now(),
-      },
-      ...cachedDealers.filter((dealer) => dealer.id !== cacheId),
-    ].slice(0, DEALER_CACHE_LIMIT);
-
-    setCachedDealers(next);
-    persistDealerCache(next);
-  }
-
-  function handleSelectCachedDealer(selectedId) {
-    if (!selectedId) return;
-    const selected = cachedDealers.find((dealer) => dealer.id === selectedId);
+    const selected = dealers.find((dealer) => dealer.id === selectedId);
     if (!selected) return;
+
+    const shouldResetStockInItems =
+      state.invoice_type === STOCK_IN &&
+      Boolean(state.dealer_id) &&
+      state.dealer_id !== selected.id;
 
     dispatch({
       type: "SET_FIELDS",
       payload:
         state.invoice_type === STOCK_OUT
           ? {
+              dealer_id: selected.id,
               invoice_to: selected.name || "",
               address_to: selected.address || "",
               phone_to: selected.phone || "",
               other_party_gst: selected.gst || "",
+              ...(shouldResetStockInItems ? { invoice_items: [] } : {}),
             }
           : {
+              dealer_id: selected.id,
               invoice_from: selected.name || "",
               address_from: selected.address || "",
               phone_from: selected.phone || "",
               other_party_gst: selected.gst || "",
+              ...(shouldResetStockInItems ? { invoice_items: [] } : {}),
             },
     });
+
+    if (shouldResetStockInItems) {
+      setBillItemsPage(1);
+    }
   }
 
   const generateInvoiceMutation = useMutation({
@@ -218,6 +249,29 @@ export function BillDetails({ setShowInvoice, setBillId }) {
       return;
     }
 
+    if (!state.dealer_id || !selectedDealer) {
+      setErrorModalMessage(
+        "Please select a dealer before generating the bill.",
+      );
+      return;
+    }
+
+    if (state.invoice_type === STOCK_IN) {
+      const missingCatalogItem = state.invoice_items.find((item) => {
+        const catalogId = String(
+          item.product_catalog_id || item.id || "",
+        ).trim();
+        return !catalogId;
+      });
+
+      if (missingCatalogItem) {
+        setErrorModalMessage(
+          `Selected item is missing product mapping: ${missingCatalogItem.name}. Remove and add it again.`,
+        );
+        return;
+      }
+    }
+
     const amount = Number(depositedAmount);
 
     if (!Number.isFinite(amount) || amount < 0) {
@@ -232,27 +286,44 @@ export function BillDetails({ setShowInvoice, setBillId }) {
       return;
     }
 
+    let createdAtOverride = null;
+    if (manualInvoiceDate) {
+      const parsed = new Date(`${manualInvoiceDate}T12:00:00`);
+      if (Number.isNaN(parsed.getTime())) {
+        setErrorModalMessage("Invalid invoice date selected.");
+        return;
+      }
+      createdAtOverride = parsed.toISOString();
+    }
+
     const invoiceDetails =
       state.invoice_type === STOCK_OUT
         ? {
             invoice_type: STOCK_OUT,
+            dealer_id: state.dealer_id,
             invoice_to: state.invoice_to,
             address_to: state.address_to,
             phone_to: state.phone_to,
             other_party_gst: state.other_party_gst,
+            created_at: createdAtOverride,
           }
         : {
             invoice_type: STOCK_IN,
+            dealer_id: state.dealer_id,
             invoice_from: state.invoice_from,
             address_from: state.address_from,
             phone_from: state.phone_from,
             other_party_gst: state.other_party_gst,
+            created_at: createdAtOverride,
           };
 
     const invoiceItemsDetails = state.invoice_items.map((item) => {
       // For stock_in, item.id is product_catalog.id.
       // For stock_out, item.id is inventory.id, so use product_catalog_id only.
-      const mappedProductCatalogId = item.product_catalog_id || null;
+      const mappedProductCatalogId =
+        state.invoice_type === STOCK_IN
+          ? String(item.product_catalog_id || item.id || "").trim() || null
+          : String(item.product_catalog_id || "").trim() || null;
 
       return {
         name: item.name,
@@ -263,8 +334,8 @@ export function BillDetails({ setShowInvoice, setBillId }) {
         product_qty: Number(item.item_qty || 0),
         rate: Number(item.rate || 0),
         mrp: Number(item.mrp || 0),
-        cgst: Number(state.cgst || 0),
-        sgst: Number(state.sgst || 0),
+        cgst: Number(item.cgst || 2.5),
+        sgst: Number(item.sgst || 2.5),
         discount: Number(item.discount || 0),
         product_catalog_id: mappedProductCatalogId,
       };
@@ -314,6 +385,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
     await dispatch({
       type: "SET_FIELDS",
       payload: {
+        dealer_id: "",
         invoice_from: "",
         address_from: "",
         phone_from: "",
@@ -331,12 +403,15 @@ export function BillDetails({ setShowInvoice, setBillId }) {
       },
     });
 
+    setBillItemsPage(1);
+
     // then apply the value based on the invoice_type
 
     if (selectedType === STOCK_OUT) {
       await dispatch({
         type: "SET_FIELDS",
         payload: {
+          dealer_id: "",
           invoice_from: mamaJiDetails.name,
           address_from: mamaJiDetails.address,
           phone_from: mamaJiDetails.phoneNo,
@@ -346,6 +421,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
       await dispatch({
         type: "SET_FIELDS",
         payload: {
+          dealer_id: "",
           invoice_to: mamaJiDetails.name,
           address_to: mamaJiDetails.address,
           phone_to: mamaJiDetails.phoneNo,
@@ -432,128 +508,48 @@ export function BillDetails({ setShowInvoice, setBillId }) {
           </div>
 
           <div className="form-el-container">
-            <span>Party Name</span>
-            <input
+            <span>Select Dealer</span>
+            <select
               className="formEl"
               required
-              type="text"
-              placeholder="e.g. arihant enterprises"
-              value={
-                state.invoice_type === STOCK_OUT
-                  ? state.invoice_to
-                  : state.invoice_from
+              value={state.dealer_id || ""}
+              onChange={(e) => handleSelectDealer(e.target.value)}
+              disabled={
+                dealersQuery.isLoading || generateInvoiceMutation.isPending
               }
-              onChange={(e) =>
-                dispatch({
-                  type: "SET_FIELDS",
-                  payload:
-                    state.invoice_type === STOCK_OUT
-                      ? { invoice_to: e.target.value }
-                      : { invoice_from: e.target.value },
-                })
-              }
-            />
+            >
+              <option value="">
+                {dealersQuery.isLoading
+                  ? "Loading dealers..."
+                  : "Select dealer"}
+              </option>
+              {dealers.map((dealer) => (
+                <option key={dealer.id} value={dealer.id}>
+                  {dealer.name} ({dealer.phone})
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
-        <div className="form-sub-container">
-          <div className="form-el-container">
-            <span>Party Address</span>
-            <input
-              className="formEl"
-              required
-              type="text"
-              placeholder="e.g near navlakha road, indore"
-              value={
-                state.invoice_type === STOCK_OUT
-                  ? state.address_to
-                  : state.address_from
-              }
-              onChange={(e) =>
-                dispatch({
-                  type: "SET_FIELDS",
-                  payload:
-                    state.invoice_type === STOCK_OUT
-                      ? { address_to: e.target.value }
-                      : { address_from: e.target.value },
-                })
-              }
-            />
+        {dealersQuery.isLoading ? null : dealers.length === 0 ? (
+          <div className="no-dealer-cta">
+            <p>
+              No dealers found for <strong>{state.invoice_type}</strong>. Add a
+              dealer first.
+            </p>
+            <Link className="go-dealers-link" to="/dealers">
+              Go to Dealers
+            </Link>
           </div>
+        ) : null}
 
-          <div className="form-el-container">
-            <span>Party Phone No.</span>
-            <input
-              className="formEl"
-              required
-              type="number"
-              placeholder="e.g. XXXXX98260"
-              maxLength={10}
-              value={
-                state.invoice_type === STOCK_OUT
-                  ? state.phone_to
-                  : state.phone_from
-              }
-              onChange={(e) =>
-                dispatch({
-                  type: "SET_FIELDS",
-                  payload:
-                    state.invoice_type === STOCK_OUT
-                      ? { phone_to: e.target.value }
-                      : { phone_from: e.target.value },
-                })
-              }
-            />
-          </div>
-        </div>
-
-        <div className="form-sub-container party-gst-row">
-          <div className="form-el-container">
-            <span>Party GST No.</span>
-            <input
-              className="formEl"
-              required
-              type="text"
-              placeholder="e.g. 27ABCDE1234F1Z5"
-              value={state.other_party_gst || ""}
-              onChange={(e) =>
-                dispatch({
-                  type: "SET_FIELDS",
-                  payload: { other_party_gst: e.target.value.toUpperCase() },
-                })
-              }
-            />
-          </div>
-
-          <div className="form-el-container">
-            <span>Cached Dealers</span>
-            <div className="cache-dealer-controls">
-              <select
-                className="formEl"
-                defaultValue=""
-                onChange={(e) => handleSelectCachedDealer(e.target.value)}
-              >
-                <option value="">Select dealer</option>
-                {cachedDealers.map((dealer) => (
-                  <option key={dealer.id} value={dealer.id}>
-                    {dealer.name} ({dealer.phone})
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                className="cache-dealer-btn"
-                onClick={saveCurrentDealerToCache}
-              >
-                Save Dealer
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div id="billItemsContainer" className="scroll-hide">
+        <div
+          id="billItemsContainer"
+          className={`scroll-hide ${state.invoice_items && state.invoice_items.length > 0 ? "" : "bill-items-empty"}`}
+        >
           {state.invoice_items && state.invoice_items.length > 0 ? (
-            state.invoice_items.map((item) => {
+            pagedInvoiceItems.map((item) => {
               return (
                 <ProductCard
                   res={item}
@@ -569,45 +565,39 @@ export function BillDetails({ setShowInvoice, setBillId }) {
             </span>
           )}
         </div>
+        {state.invoice_items &&
+        state.invoice_items.length > BILL_ITEMS_PAGE_SIZE ? (
+          <PaginationComp
+            page={billItemsPage}
+            pageSize={BILL_ITEMS_PAGE_SIZE}
+            total={state.invoice_items.length}
+            onChange={setBillItemsPage}
+            disabled={generateInvoiceMutation.isPending}
+            showFirstLast={true}
+            siblingCount={1}
+            ariaLabel="Bill items pagination"
+          />
+        ) : null}
         <div className="form-sub-container">
-          <p>Your Total : ₹{estimatedBillAmount}</p>
-          <div className="form-sub-container2">
-            <div>
-              <em>CGST </em>{" "}
-              <input
-                className="formEl2"
-                required
-                type="text"
-                placeholder="2.5"
-                value={state.cgst}
-                onChange={(e) =>
-                  dispatch({
-                    type: "SET_FIELDS",
-                    payload: { cgst: e.target.value },
-                  })
-                }
-              />
-            </div>
-            <div>
-              <em>SGST </em>{" "}
-              <input
-                className="formEl2"
-                required
-                type="text"
-                placeholder="2.5"
-                value={state.sgst}
-                onChange={(e) =>
-                  dispatch({
-                    type: "SET_FIELDS",
-                    payload: { sgst: e.target.value },
-                  })
-                }
-              />
-            </div>
+          <div className="bill-total-summary">
+            <p>
+              Your Total : {formatCurrencyAmount(roundedEstimatedBillAmount)}
+            </p>
+            <p>Round Off : {formatSignedCurrencyAmount(roundOffAmount)}</p>
           </div>
         </div>
 
         <div className="form-sub-container payment-row">
+          <div className="form-el-container">
+            <span>Invoice Date (optional)</span>
+            <input
+              className="formEl"
+              type="date"
+              value={manualInvoiceDate}
+              onChange={(e) => setManualInvoiceDate(e.target.value)}
+            />
+          </div>
+
           <div className="form-el-container">
             <span>Deposited Amount</span>
             <input
@@ -617,6 +607,11 @@ export function BillDetails({ setShowInvoice, setBillId }) {
               step="0.01"
               value={depositedAmount}
               onChange={(e) => setDepositedAmount(e.target.value)}
+              onBlur={(e) =>
+                setDepositedAmount(
+                  toFixedTwo(e.target.value, 0, { clampMin: 0 }),
+                )
+              }
               placeholder="0"
             />
           </div>

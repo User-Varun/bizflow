@@ -1,11 +1,16 @@
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
 import "../styles/invoiceTemplate.css";
 import { useQuery } from "@tanstack/react-query";
 import { requestJSON } from "../styles/utils/requestJSON";
 import { LoadingSpinner } from "./LoadingSpinner";
+import {
+  formatCurrencyAmount,
+  formatPercent,
+  formatSignedCurrencyAmount,
+  toFixedTwo,
+} from "../lib/formatters";
 
 const baseUrl = import.meta.env.VITE_API_URL;
+const ITEMS_PER_PAGE = 6;
 
 export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
   const { data, isLoading, isError, error } = useQuery({
@@ -16,8 +21,18 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
       }),
     select: (payload) => payload?.result || null,
     enabled: Boolean(id),
-    staleTime: 30000,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
+
+  function buildQrSrc(qrUrl, versionSeed) {
+    const url = String(qrUrl || "").trim();
+    if (!url) return "/qr.png";
+    if (url.startsWith("data:")) return url;
+
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}v=${encodeURIComponent(String(versionSeed || "0"))}`;
+  }
 
   function clacSubTotal() {
     return Number(data?.sub_total || 0);
@@ -25,6 +40,32 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
 
   function clacGrandTotal() {
     return Number(data?.grand_total || 0);
+  }
+
+  function calcRawGrandTotal() {
+    const items = data?.invoice_items || [];
+
+    return items.reduce((sum, item) => {
+      const baseAmount = Number(item.rate || 0) * Number(item.product_qty || 0);
+      const discountAmount = (baseAmount * Number(item.discount || 0)) / 100;
+      const taxableAmount = Math.max(0, baseAmount - discountAmount);
+      const cgstAmount = (taxableAmount * Number(item.cgst || 0)) / 100;
+      const sgstAmount = (taxableAmount * Number(item.sgst || 0)) / 100;
+
+      return sum + taxableAmount + cgstAmount + sgstAmount;
+    }, 0);
+  }
+
+  function calcRoundOffAmount() {
+    const roundOffFromApi = Number(data?.round_off);
+    if (Number.isFinite(roundOffFromApi)) {
+      return roundOffFromApi;
+    }
+
+    const roundedTotal = clacGrandTotal();
+    const rawTotal = calcRawGrandTotal();
+
+    return Number((roundedTotal - rawTotal).toFixed(2));
   }
 
   function calcDiscountTotal() {
@@ -40,7 +81,11 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
   }
 
   function formatAmt(n) {
-    return `₹${Number(n || 0).toFixed(2)}`;
+    return formatCurrencyAmount(n);
+  }
+
+  function formatDecimalAmt(n) {
+    return formatSignedCurrencyAmount(n);
   }
 
   function numberToWords(num) {
@@ -134,65 +179,65 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
     return result + " only";
   }
 
-  async function handleDownloadPDF() {
-    const el = document.getElementById("invoice-root");
-    if (!el) return;
-
-    // capture at scale for crispnessa
-    const scale = Math.max(1, Math.min(3, window.devicePixelRatio || 2));
-    const canvas = await html2canvas(el, {
-      scale,
-      useCORS: true,
-    });
-    const imgData = canvas.toDataURL("image/png");
-
-    // canvas.width/height are in device pixels (cssPx * scale)
-    const cssWidthPx = canvas.width / scale;
-    const cssHeightPx = canvas.height / scale;
-
-    // convert CSS px -> mm (assume 96 DPI baseline)
-    const mmPerPx = 25.4 / 96;
-    const pdfWidthMm = cssWidthPx * mmPerPx;
-    const pdfHeightMm = cssHeightPx * mmPerPx;
-
-    // force landscape if you want always landscape:
-    const orientation = pdfWidthMm >= pdfHeightMm ? "landscape" : "portrait";
-
-    // create a PDF with exact dimensions in mm (no fallback to A4)
-    let pdf;
-    try {
-      pdf = new jsPDF({
-        unit: "mm",
-        format: [pdfWidthMm, pdfHeightMm],
-        orientation,
-      });
-    } catch (err) {
-      console.log(err);
-      // older API fallback
-      pdf = new jsPDF(orientation === "landscape" ? "l" : "p", "mm", [
-        pdfWidthMm,
-        pdfHeightMm,
-      ]);
-    }
-
-    // add image at full page size (no extra margins)
-    pdf.addImage(imgData, "PNG", 0, 0, pdfWidthMm, pdfHeightMm);
-    pdf.save(`invoice-${Date.now()}.pdf`);
+  function handlePrintInvoice() {
+    window.print();
   }
 
   function formatDate(dateStr) {
     const date = new Date(dateStr);
-    const formatted = `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
+    if (Number.isNaN(date.getTime())) return "-";
+
+    const day = String(date.getUTCDate()).padStart(2, "0");
+    const monthNames = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    const month = monthNames[date.getUTCMonth()] || "";
+    const year = date.getUTCFullYear();
+    const formatted = `${day}-${month}-${year}`;
 
     return formatted;
   }
 
   const invoiceType = String(data?.invoice_type || "").toLowerCase();
+  const isStockIn = invoiceType === "stock_in";
   const companyGstin = String(data?.company_gstin || "").trim();
   const partyGstin = String(data?.other_party_gst || "").trim();
 
   const gstinValue = invoiceType === "stock_out" ? companyGstin : partyGstin;
   const gstValue = invoiceType === "stock_out" ? partyGstin : companyGstin;
+  const qrSrc = buildQrSrc(data?.qr_url, data?.tenant_payment_updated_at);
+  const invoiceItems = Array.isArray(data?.invoice_items)
+    ? data.invoice_items
+    : [];
+
+  const itemPages =
+    invoiceItems.length > 0
+      ? Array.from(
+          { length: Math.ceil(invoiceItems.length / ITEMS_PER_PAGE) },
+          (_, pageIndex) =>
+            invoiceItems.slice(
+              pageIndex * ITEMS_PER_PAGE,
+              (pageIndex + 1) * ITEMS_PER_PAGE,
+            ),
+        )
+      : [[]];
+
+  const totalPages = itemPages.length;
+  const sheetPages = Array.from(
+    { length: Math.ceil(totalPages / 2) },
+    (_, sheetIndex) => itemPages.slice(sheetIndex * 2, sheetIndex * 2 + 2),
+  );
 
   if (isLoading) {
     return <LoadingSpinner label="Loading invoice..." minHeight="300px" />;
@@ -203,159 +248,220 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
 
   return data ? (
     <div className="invoice-template-container">
-      <div id="invoice-root" className="invoice-container">
-        <div className="invoice-border">
-          <header className="inv-top">
-            <div className="inv-left">
-              <h2 className="company">{data.invoice_from}</h2>
-              <span className="text-s">{data.address_from}</span>
-              <span className="text-s">Phone: {data.phone_from}</span>
-            </div>
+      <div id="invoice-root" className="invoice-pages-stack">
+        {sheetPages.map((sheet, sheetIndex) => (
+          <div className="invoice-print-sheet" key={`sheet-${sheetIndex + 1}`}>
+            {sheet.map((pageItems, innerIndex) => {
+              const pageIndex = sheetIndex * 2 + innerIndex;
 
-            <div className="inv-right">
-              <h2 className="company">{data.invoice_to}</h2>
-              <p className="text-s">{data.address_to}</p>
-              <p className="text-s">Phone: {data.phone_to}</p>
-              {/* <p className="text-s">GST : {data[0].gst}</p> */}
-              <p className="text-s">GST : {gstValue || "-"}</p>
-            </div>
-          </header>
+              return (
+                <div
+                  className="invoice-print-page"
+                  key={`page-${pageIndex + 1}`}
+                >
+                  <div className="invoice-container">
+                    <div className="invoice-border">
+                      <div className="invoice-page-tag">
+                        Page {pageIndex + 1}/{totalPages}
+                      </div>
+                      <header className="inv-top">
+                        <div className="inv-left">
+                          <h2 className="company">{data.invoice_from}</h2>
+                          <span className="text-s">{data.address_from}</span>
+                          <span className="text-s">
+                            Phone: {data.phone_from}
+                          </span>
+                        </div>
 
-          <section className="bill-meta">
-            <div className="container-pad">
-              {/* <span>GSTIN: {data[0].gst_in}</span> */}
-              <span>GSTIN: {gstinValue || "-"}</span>
-            </div>
-            <div className="inv-center">
-              <h1 className="inv-title">GST INVOICE</h1>
-            </div>
-            <div className="inv-right-inner container-pad-2">
-              <span>Invoice No. : {data.invoice_number}</span>
-              <span>Date : {formatDate(data.createdAt)}</span>
-            </div>
-          </section>
+                        <div className="inv-right">
+                          <h2 className="company">{data.invoice_to}</h2>
+                          <p className="text-s">{data.address_to}</p>
+                          <p className="text-s">Phone: {data.phone_to}</p>
+                          <p className="text-s">GST : {gstValue || "-"}</p>
+                        </div>
+                      </header>
 
-          <table className="inv-table">
-            <thead>
-              <tr>
-                <th>Sn.</th>
-                <th>QTY</th>
-                <th>Product</th>
-                <th>HSN</th>
-                <th>MRP</th>
-                <th>RATE</th>
-                <th>Discount</th>
-                <th>SGST</th>
-                <th>CGST</th>
-                <th>Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.invoice_items && data.invoice_items.length > 0 ? (
-                data.invoice_items.map((item, idx) => {
-                  const baseAmount =
-                    Number(item.rate || 0) * Number(item.product_qty || 0);
-                  const discountPct = Number(item.discount || 0);
-                  const discountAmount = (baseAmount * discountPct) / 100;
-                  const lineAmount = baseAmount - discountAmount;
+                      <section className="bill-meta">
+                        <div className="container-pad">
+                          <span>GSTIN: {gstinValue || "-"}</span>
+                        </div>
+                        <div className="inv-center">
+                          <h1 className="inv-title">GST INVOICE</h1>
+                        </div>
+                        <div className="inv-right-inner container-pad-2">
+                          <span>Invoice No. : {data.invoice_number}</span>
+                          <span>Date : {formatDate(data.createdAt)}</span>
+                        </div>
+                      </section>
 
-                  return (
-                    <tr key={item.id || idx}>
-                      <td>{idx + 1}</td>
-                      <td>{item.product_qty}</td>
-                      <td className="prod-col prod-name">{item.name}</td>
-                      <td>{item.hsn_code || "-"}</td>
-                      <td>₹{item.mrp ?? "-"}</td>
-                      <td>₹{item.rate ?? "-"}</td>
-                      <td className="discount-cell">
-                        {Number(item.discount || 0)}%
-                      </td>
-                      <td>{Number(item.sgst || 0)}%</td>
-                      <td>{Number(item.cgst || 0)}%</td>
-                      <td>{formatAmt(lineAmount)}</td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={10} style={{ textAlign: "center" }}>
-                    NO Items available
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-          <div className="subTotalContainer">
-            <div className="inner-stc">
-              <span>SUB TOTAL</span>
-              <span>{formatAmt(clacSubTotal())}</span>
-            </div>
+                      <table className="inv-table">
+                        <colgroup>
+                          <col className="inv-col-sn" />
+                          <col className="inv-col-qty" />
+                          <col className="inv-col-product" />
+                          <col className="inv-col-hsn" />
+                          <col className="inv-col-mrp" />
+                          <col className="inv-col-rate" />
+                          <col className="inv-col-discount" />
+                          <col className="inv-col-sgst" />
+                          <col className="inv-col-cgst" />
+                          <col className="inv-col-amount" />
+                        </colgroup>
+                        <thead>
+                          <tr>
+                            <th>Sn.</th>
+                            <th>QTY</th>
+                            <th>Product</th>
+                            <th>HSN</th>
+                            <th>MRP</th>
+                            <th>RATE</th>
+                            <th>DIS</th>
+                            <th>SGST</th>
+                            <th>CGST</th>
+                            <th>Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pageItems.length > 0 ? (
+                            pageItems.map((item, idx) => {
+                              const baseAmount =
+                                Number(item.rate || 0) *
+                                Number(item.product_qty || 0);
+                              const discountPct = Number(item.discount || 0);
+                              const discountAmount =
+                                (baseAmount * discountPct) / 100;
+                              const taxableAmount = Math.max(
+                                0,
+                                baseAmount - discountAmount,
+                              );
+                              const cgstAmount =
+                                (taxableAmount * Number(item.cgst || 0)) / 100;
+                              const sgstAmount =
+                                (taxableAmount * Number(item.sgst || 0)) / 100;
+                              const lineAmount =
+                                taxableAmount + cgstAmount + sgstAmount;
+
+                              return (
+                                <tr key={item.id || `${pageIndex}-${idx}`}>
+                                  <td>
+                                    {pageIndex * ITEMS_PER_PAGE + idx + 1}
+                                  </td>
+                                  <td>{toFixedTwo(item.product_qty)}</td>
+                                  <td className="prod-col prod-name">
+                                    {item.name}
+                                  </td>
+                                  <td>{item.hsn_code || "-"}</td>
+                                  <td>{formatAmt(item.mrp ?? 0)}</td>
+                                  <td>{formatAmt(item.rate ?? 0)}</td>
+                                  <td className="discount-cell">
+                                    {formatPercent(item.discount || 0)}
+                                  </td>
+                                  <td>{formatPercent(item.sgst || 0)}</td>
+                                  <td>{formatPercent(item.cgst || 0)}</td>
+                                  <td>{formatAmt(lineAmount)}</td>
+                                </tr>
+                              );
+                            })
+                          ) : (
+                            <tr>
+                              <td colSpan={10} style={{ textAlign: "center" }}>
+                                NO Items available
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                      <div className="subTotalContainer">
+                        <div className="inner-stc">
+                          <span>SUB TOTAL</span>
+                          <span>{formatAmt(clacSubTotal())}</span>
+                        </div>
+                      </div>
+
+                      <div className="totals-row">
+                        <div className="left-block">
+                          <div className="inner-left-block">
+                            <p className="in-words">
+                              Rs. {numberToWords(clacGrandTotal())}
+                            </p>
+                            {!isStockIn ? (
+                              <>
+                                <div className="terms">
+                                  <a href="#">Terms & Conditions</a>
+                                </div>
+                                <div className="terms-more">
+                                  <p>
+                                    Goods once sold will not be taken back or
+                                    exchanged.
+                                  </p>
+                                  <span>
+                                    Bills not paid due date will attract 24%
+                                    interest.
+                                  </span>
+                                </div>
+                                <div className="bank">
+                                  <span>
+                                    <strong>A/C NO: </strong>{" "}
+                                    {data.account_number || "-"}
+                                  </span>
+                                  <span>
+                                    <strong>IFSC CODE: </strong>{" "}
+                                    {data.ifsc_code || "-"}
+                                  </span>
+                                </div>
+                              </>
+                            ) : null}
+                          </div>
+                          <div className="inner-right-block">
+                            {!isStockIn ? (
+                              <>
+                                <img className="qr" src={qrSrc} alt="QR code" />
+                                <span>
+                                  For {data.invoice_from || "Business"}
+                                </span>
+                              </>
+                            ) : (
+                              <span>Seller: {data.invoice_from || "-"}</span>
+                            )}
+                          </div>
+                          <div className="inner-middle-down-block">
+                            <a href="#" className="auth-sig">
+                              Authorised Signatory
+                            </a>
+                          </div>
+                        </div>
+                        <div className="right-block">
+                          <div className="tot-line">
+                            <span>SGST PAYABLE</span>
+                            <span>{formatAmt(data.sgst_total)}</span>
+                          </div>
+                          <div className="tot-line">
+                            <span>CGST PAYABLE</span>
+                            <span>{formatAmt(data.cgst_total)}</span>
+                          </div>
+                          <div className="tot-line">
+                            <span>DISCOUNT</span>
+                            <span>{formatAmt(calcDiscountTotal())}</span>
+                          </div>
+                          <div className="tot-line">
+                            <span>ROUND OFF</span>
+                            <span>
+                              {formatDecimalAmt(calcRoundOffAmount())}
+                            </span>
+                          </div>
+                          <div className="tot-line grand">
+                            <span>GRAND TOTAL</span>
+                            <span>{formatAmt(clacGrandTotal())}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-
-          <div className="totals-row">
-            <div className="left-block">
-              <div className="inner-left-block">
-                <p className="in-words">
-                  Rs. {numberToWords(clacGrandTotal())}
-                </p>
-                <div className="terms">
-                  <a href="#">Terms & Conditions</a>
-                </div>
-                <div className="terms-more">
-                  <p>Goods once sold will not be taken back or exchanged.</p>
-                  <span>
-                    Bills not paid due date will attract 24% interest.
-                  </span>
-                </div>
-                <div className="bank">
-                  <span>
-                    <strong>HDFC BANK: </strong> (needs edit)
-                  </span>
-                  <span>
-                    I<strong>FSC CODE: </strong> (needs edit)
-                  </span>
-                </div>
-              </div>
-              <div className="inner-right-block">
-                <img
-                  className="qr"
-                  // src={data[0].qr_url || "/qr.png"}
-                  src={"/qr.png"}
-                  alt="QR code"
-                />
-                <span>For V.S. Enterprises</span>
-              </div>
-              <div className="inner-middle-down-block">
-                <a href="#" className="auth-sig">
-                  Authorised Signatory
-                </a>
-              </div>
-            </div>
-            <div className="right-block">
-              <div className="tot-line">
-                <span>SGST PAYABLE</span>
-                <span>{formatAmt(data.sgst_total)}</span>
-              </div>
-              <div className="tot-line">
-                <span>CGST PAYABLE</span>
-                <span>{formatAmt(data.cgst_total)}</span>
-              </div>
-              <div className="tot-line">
-                <span>DISCOUNT</span>
-                <span>{formatAmt(calcDiscountTotal())}</span>
-              </div>
-
-              {/* <div className="tot-line">
-                <span>CR/DR NOTE</span>
-                <span>0</span>
-              </div>  */}
-              <div className="tot-line grand">
-                <span>GRAND TOTAL</span>
-                <span>{formatAmt(clacGrandTotal())}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        ))}
       </div>
 
       <div className="invoice-actions-row">
@@ -370,10 +476,10 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
         ) : null}
         <button
           type="button"
-          className="invoice-action-btn invoice-action-btn-primary"
-          onClick={handleDownloadPDF}
+          className="invoice-action-btn invoice-action-btn-secondary"
+          onClick={handlePrintInvoice}
         >
-          Download this in PDF
+          Print Invoice
         </button>
       </div>
     </div>

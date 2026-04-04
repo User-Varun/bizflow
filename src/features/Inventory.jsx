@@ -11,7 +11,7 @@ import { useState } from "react";
 
 export function Inventory() {
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(8);
+  const [pageSize] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
 
   const normalizedSearch = searchQuery.trim();

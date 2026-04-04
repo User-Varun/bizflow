@@ -3,7 +3,9 @@ import { BillViewCard } from "../ui/BillViewCard";
 import { PaginationComp } from "../ui/PaginationComp";
 import "../styles/viewBills.css";
 import { InvoiceTemplate } from "../ui/InvoiceTemplate";
+import { EditInvoiceModal } from "../ui/EditInvoiceModal";
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { requestJSON } from "../styles/utils/requestJSON";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
@@ -11,10 +13,15 @@ import "../index.css";
 
 export function ViewBills() {
   const baseUrl = import.meta.env.VITE_API_URL;
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFilter, setSearchFilter] = useState("invoice_number");
+  const [billTypeFilter, setBillTypeFilter] = useState("all");
+  const [dealerIdFilter, setDealerIdFilter] = useState("");
   const [id, setId] = useState(null);
+  const [editingInvoiceId, setEditingInvoiceId] = useState(null);
+  const [editInvoiceError, setEditInvoiceError] = useState("");
   const [showInvoice, setShowInvoice] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(8);
@@ -23,11 +30,18 @@ export function ViewBills() {
   const { data, isLoading, isFetching, error } = useQuery({
     queryKey: [
       "viewInvoices",
-      { page, pageSize, search: normalizedSearch, searchFilter },
+      {
+        page,
+        pageSize,
+        search: normalizedSearch,
+        searchFilter,
+        billTypeFilter,
+        dealerIdFilter,
+      },
     ],
     queryFn: () =>
       requestJSON(
-        `${baseUrl}/viewInvoices?page=${page}&pageSize=${pageSize}&search=${encodeURIComponent(normalizedSearch)}&searchFilter=${encodeURIComponent(searchFilter)}`,
+        `${baseUrl}/viewInvoices?page=${page}&pageSize=${pageSize}&search=${encodeURIComponent(normalizedSearch)}&searchFilter=${encodeURIComponent(searchFilter)}&billType=${encodeURIComponent(billTypeFilter)}&dealerId=${encodeURIComponent(dealerIdFilter)}`,
         {
           method: "GET",
         },
@@ -35,6 +49,43 @@ export function ViewBills() {
     staleTime: 30000,
     placeholderData: (previousData) => previousData,
   });
+
+  const dealerOptionsQuery = useQuery({
+    queryKey: ["viewBillsDealerOptions", billTypeFilter],
+    queryFn: async () => {
+      const fetchByType = async (type) => {
+        const response = await requestJSON(
+          `${baseUrl}/dealers?invoice_type=${encodeURIComponent(type)}&page=1&pageSize=100`,
+          { method: "GET" },
+        );
+
+        const rows = Array.isArray(response?.result) ? response.result : [];
+        return rows.map((dealer) => ({
+          id: dealer.id,
+          name: dealer.name,
+          phone: dealer.phone,
+          invoice_type: dealer.invoice_type || type,
+        }));
+      };
+
+      if (billTypeFilter === "all") {
+        const [outRows, inRows] = await Promise.all([
+          fetchByType("stock_out"),
+          fetchByType("stock_in"),
+        ]);
+
+        return [...outRows, ...inRows];
+      }
+
+      return fetchByType(billTypeFilter);
+    },
+    staleTime: 30000,
+    placeholderData: (previousData) => previousData,
+  });
+
+  const dealerOptions = Array.isArray(dealerOptionsQuery.data)
+    ? dealerOptionsQuery.data
+    : [];
 
   const bills = data?.result || [];
   const total = data?.total || 0;
@@ -51,6 +102,114 @@ export function ViewBills() {
     },
   });
 
+  const updateInvoiceDateMutation = useMutation({
+    mutationFn: ({ id, created_at }) =>
+      requestJSON(`${baseUrl}/viewInvoices/${id}/date`, {
+        method: "PATCH",
+        body: JSON.stringify({ created_at }),
+      }),
+    onSuccess: (response) => {
+      const updatedId = response?.result?.id;
+      const updatedCreatedAt = response?.result?.createdAt;
+
+      if (updatedId && updatedCreatedAt) {
+        queryClient.setQueriesData({ queryKey: ["viewInvoices"] }, (old) => {
+          if (!old?.result || !Array.isArray(old.result)) return old;
+
+          return {
+            ...old,
+            result: old.result.map((bill) =>
+              bill.id === updatedId
+                ? { ...bill, createdAt: updatedCreatedAt }
+                : bill,
+            ),
+          };
+        });
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["viewInvoices"] });
+      queryClient.invalidateQueries({ queryKey: ["invoice"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+
+  const invoiceToEditQuery = useQuery({
+    queryKey: ["invoiceToEdit", editingInvoiceId],
+    queryFn: () =>
+      requestJSON(`${baseUrl}/viewInvoices/${editingInvoiceId}`, {
+        method: "GET",
+      }),
+    enabled: Boolean(editingInvoiceId),
+    staleTime: 0,
+  });
+
+  const editSourceQuery = useQuery({
+    queryKey: [
+      "editInvoiceSourceItems",
+      editingInvoiceId,
+      invoiceToEditQuery.data?.result?.invoice_type,
+      invoiceToEditQuery.data?.result?.dealer_id,
+    ],
+    queryFn: async () => {
+      const invoiceType = invoiceToEditQuery.data?.result?.invoice_type;
+      const dealerId = String(
+        invoiceToEditQuery.data?.result?.dealer_id || "",
+      ).trim();
+      const sourcePath =
+        invoiceType === "stock_in" ? "productCatalog" : "inventory";
+
+      if (invoiceType === "stock_in" && !dealerId) {
+        return [];
+      }
+
+      const params = new URLSearchParams({
+        page: "1",
+        pageSize: "200",
+        search: "",
+      });
+
+      if (invoiceType === "stock_in") {
+        params.set("dealer_id", dealerId);
+      }
+
+      const response = await requestJSON(
+        `${baseUrl}/${sourcePath}?${params.toString()}`,
+        {
+          method: "GET",
+        },
+      );
+
+      const rows = response?.result || [];
+      if (invoiceType !== "stock_in") {
+        return rows.filter((item) => Number(item?.product_qty || 0) > 0);
+      }
+
+      return rows;
+    },
+    enabled:
+      Boolean(editingInvoiceId) &&
+      Boolean(invoiceToEditQuery.data?.result?.invoice_type),
+    staleTime: 30000,
+  });
+
+  const editInvoiceMutation = useMutation({
+    mutationFn: ({ id, payload }) =>
+      requestJSON(`${baseUrl}/viewInvoices/${id}/edit`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["viewInvoices"] });
+      queryClient.invalidateQueries({ queryKey: ["invoice"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      setEditInvoiceError("");
+      setEditingInvoiceId(null);
+    },
+    onError: (err) => {
+      setEditInvoiceError(err?.message || "Failed to update invoice.");
+    },
+  });
+
   function handleSearchChange(value) {
     setSearchQuery(value);
     setPage(1);
@@ -59,6 +218,28 @@ export function ViewBills() {
   function handleFilterChange(value) {
     setSearchFilter(value);
     setPage(1);
+  }
+
+  function handleBillTypeFilterChange(value) {
+    setBillTypeFilter(value);
+    setDealerIdFilter("");
+    setPage(1);
+  }
+
+  function handleDealerFilterChange(value) {
+    setDealerIdFilter(value);
+    setPage(1);
+  }
+
+  function openEditInvoiceModal(invoiceId) {
+    setEditInvoiceError("");
+    setEditingInvoiceId(invoiceId);
+  }
+
+  function closeEditInvoiceModal() {
+    if (editInvoiceMutation.isPending) return;
+    setEditInvoiceError("");
+    setEditingInvoiceId(null);
   }
 
   if (error) {
@@ -91,6 +272,34 @@ export function ViewBills() {
               <option value="invoice_from">By Seller Name</option>
             </select>
           </div>
+          <div className="viewBillFilter">
+            <select
+              value={billTypeFilter}
+              onChange={(e) => handleBillTypeFilterChange(e.target.value)}
+            >
+              <option value="all">All Bills</option>
+              <option value="stock_in">Stock In</option>
+              <option value="stock_out">Stock Out</option>
+            </select>
+          </div>
+          <div className="viewBillFilter">
+            <select
+              value={dealerIdFilter}
+              onChange={(e) => handleDealerFilterChange(e.target.value)}
+              disabled={dealerOptionsQuery.isLoading}
+            >
+              <option value="">
+                {dealerOptionsQuery.isLoading
+                  ? "Loading dealers..."
+                  : "All Dealers"}
+              </option>
+              {dealerOptions.map((dealer) => (
+                <option key={dealer.id} value={dealer.id}>
+                  {dealer.name} ({dealer.phone}) [{dealer.invoice_type}]
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       )}
 
@@ -114,10 +323,29 @@ export function ViewBills() {
                         payment_method,
                       })
                     }
+                    onUpdateDate={({ created_at }) =>
+                      updateInvoiceDateMutation.mutateAsync({
+                        id: res.id,
+                        created_at,
+                      })
+                    }
                     isPaying={
                       payInvoiceMutation.isPending &&
                       payInvoiceMutation.variables?.id === res.id
                     }
+                    isUpdatingDate={
+                      updateInvoiceDateMutation.isPending &&
+                      updateInvoiceDateMutation.variables?.id === res.id
+                    }
+                    onEditInvoice={() => openEditInvoiceModal(res.id)}
+                    isEditingInvoice={
+                      editInvoiceMutation.isPending &&
+                      editInvoiceMutation.variables?.id === res.id
+                    }
+                    onOpenDealer={() => {
+                      if (!res?.dealer_id || !res?.invoice_type) return;
+                      navigate(`/dealers/${res.invoice_type}/${res.dealer_id}`);
+                    }}
                   />
                 );
               })
@@ -158,6 +386,25 @@ export function ViewBills() {
           backButtonLabel="Back to All Bills"
         />
       )}
+
+      <EditInvoiceModal
+        isOpen={Boolean(editingInvoiceId)}
+        onClose={closeEditInvoiceModal}
+        invoiceData={invoiceToEditQuery.data?.result || null}
+        sourceItems={editSourceQuery.data || []}
+        sourceLoading={
+          editSourceQuery.isLoading || invoiceToEditQuery.isLoading
+        }
+        isSaving={editInvoiceMutation.isPending}
+        errorMessage={editInvoiceError}
+        onSave={async (payload) => {
+          setEditInvoiceError("");
+          await editInvoiceMutation.mutateAsync({
+            id: editingInvoiceId,
+            payload,
+          });
+        }}
+      />
     </section>
   );
 }
