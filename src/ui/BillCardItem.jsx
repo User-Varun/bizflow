@@ -131,7 +131,9 @@ export function BillCardItem({ res }) {
           <span className="bill-item-name">{res.name}</span>
         </div>
         <div className="bill-item-price-stack">
-          <span className="bill-item-price">MRP: {formatCurrencyAmount(safeMrp)}</span>
+          <span className="bill-item-price">
+            MRP: {formatCurrencyAmount(safeMrp)}
+          </span>
           <span className="bill-item-rate-secondary">
             Rate: {formatCurrencyAmount(safeBaseRate)}
           </span>

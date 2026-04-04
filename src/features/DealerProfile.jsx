@@ -421,8 +421,7 @@ export function DealerProfile() {
                     </span>
                   </div>
                   <p>
-                    <strong>Amount:</strong> Rs.{" "}
-                    {toFixedTwo(row.amount || 0)}
+                    <strong>Amount:</strong> Rs. {toFixedTwo(row.amount || 0)}
                   </p>
                   <p>
                     <strong>Running Balance:</strong> Rs.{" "}

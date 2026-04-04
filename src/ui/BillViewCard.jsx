@@ -173,7 +173,9 @@ export function BillViewCard({
             placeholder="Pay amount"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            onBlur={(e) => setAmount(toFixedTwo(e.target.value, 0, { clampMin: 0 }))}
+            onBlur={(e) =>
+              setAmount(toFixedTwo(e.target.value, 0, { clampMin: 0 }))
+            }
             disabled={isPaid || isPaying}
           />
           <select

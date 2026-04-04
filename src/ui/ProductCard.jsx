@@ -1,5 +1,9 @@
 import "../styles/productCard.css";
-import { formatCurrencyAmount, formatPercent, toFixedTwo } from "../lib/formatters";
+import {
+  formatCurrencyAmount,
+  formatPercent,
+  toFixedTwo,
+} from "../lib/formatters";
 
 export function ProductCard({
   res,
@@ -17,7 +21,8 @@ export function ProductCard({
   };
 
   const stockQty = Number(res?.product_qty ?? res?.item_qty ?? 0);
-  const unitLabel = `${toFixedTwo(res?.unit_qty ?? 0)} ${res?.unit_name ?? ""}`.trim();
+  const unitLabel =
+    `${toFixedTwo(res?.unit_qty ?? 0)} ${res?.unit_name ?? ""}`.trim();
   const hsnLabel = `HSN: ${res?.hsn_code ?? ""}`;
   const dealerLabel = res?.dealer?.name ? `Dealer: ${res.dealer.name}` : "";
   const showInventoryTopQty = compact && !prodCat && !billDetailsCard;
@@ -150,12 +155,16 @@ export function ProductCard({
               {billDetailsCard ? (
                 <>
                   <label>Rate</label>
-                  <p className="detail-value price">{formatCurrencyAmount(res.rate)}</p>
+                  <p className="detail-value price">
+                    {formatCurrencyAmount(res.rate)}
+                  </p>
                 </>
               ) : (
                 <>
                   <label>Price</label>
-                  <p className="detail-value price">{formatCurrencyAmount(res.mrp)}</p>
+                  <p className="detail-value price">
+                    {formatCurrencyAmount(res.mrp)}
+                  </p>
                 </>
               )}
             </div>

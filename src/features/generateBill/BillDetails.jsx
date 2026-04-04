@@ -580,7 +580,9 @@ export function BillDetails({ setShowInvoice, setBillId }) {
         ) : null}
         <div className="form-sub-container">
           <div className="bill-total-summary">
-            <p>Your Total : {formatCurrencyAmount(roundedEstimatedBillAmount)}</p>
+            <p>
+              Your Total : {formatCurrencyAmount(roundedEstimatedBillAmount)}
+            </p>
             <p>Round Off : {formatSignedCurrencyAmount(roundOffAmount)}</p>
           </div>
         </div>
@@ -606,7 +608,9 @@ export function BillDetails({ setShowInvoice, setBillId }) {
               value={depositedAmount}
               onChange={(e) => setDepositedAmount(e.target.value)}
               onBlur={(e) =>
-                setDepositedAmount(toFixedTwo(e.target.value, 0, { clampMin: 0 }))
+                setDepositedAmount(
+                  toFixedTwo(e.target.value, 0, { clampMin: 0 }),
+                )
               }
               placeholder="0"
             />
