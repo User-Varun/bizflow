@@ -24,10 +24,23 @@ export function BillCardItem({ res }) {
     e.preventDefault();
 
     let billToUpdate;
-    const id = e.target.dataset.id; // get will get data attribute named "data-id"
+    const id = String(e.currentTarget.dataset.id || res?.id || "").trim();
+    if (!id) return;
+
+    const resolvedProductCatalogId = isStockIn
+      ? String(res?.product_catalog_id || res?.id || "").trim() || null
+      : String(res?.product_catalog_id || "").trim() || null;
     const qty = searchItemsState.quantities?.[id] || 0;
-    const inputRate = Number(searchItemsState.rate?.[id]);
-    const safeRate = Number.isFinite(inputRate) ? inputRate : safeBaseRate;
+    const rawRate = searchItemsState.rate?.[id];
+    const hasExplicitRate =
+      rawRate !== undefined &&
+      rawRate !== null &&
+      String(rawRate).trim() !== "";
+    const parsedExplicitRate = Number(rawRate);
+    const safeRate =
+      hasExplicitRate && Number.isFinite(parsedExplicitRate)
+        ? parsedExplicitRate
+        : safeBaseRate;
     const discountInput = Number(searchItemsState.discount?.[id] ?? 0);
     const safeDiscount = Number.isFinite(discountInput)
       ? Math.max(0, Math.min(100, discountInput))
@@ -35,7 +48,9 @@ export function BillCardItem({ res }) {
 
     if (qty <= 0) return; // nothing to add
 
-    const exits = billState.invoice_items.find((item) => item.id == id);
+    const exits = billState.invoice_items.find(
+      (item) => String(item.id || "").trim() === id,
+    );
 
     if (exits) {
       // update existing item's property
@@ -44,6 +59,8 @@ export function BillCardItem({ res }) {
         return item.id === id
           ? {
               ...item,
+              product_catalog_id:
+                item.product_catalog_id || resolvedProductCatalogId,
               item_qty: (item.item_qty || 0) + qty,
               rate: safeRate,
               discount: safeDiscount,
@@ -62,6 +79,7 @@ export function BillCardItem({ res }) {
         ...billState.invoice_items,
         {
           ...res,
+          product_catalog_id: resolvedProductCatalogId,
           item_qty: qty,
           rate: safeRate,
           discount: safeDiscount,
@@ -75,13 +93,13 @@ export function BillCardItem({ res }) {
     }
 
     // reset the selected qty for this product only
-    searchItemsDispatch({ type: "RESET_QTY", payload: { id: res.id } });
-    searchItemsDispatch({ type: "RESET_RATE", payload: { id: res.id } });
+    searchItemsDispatch({ type: "RESET_QTY", payload: { id } });
+    searchItemsDispatch({ type: "RESET_RATE", payload: { id } });
     searchItemsDispatch({
       type: "RESET_PURCHASE_RATE_PERCENT",
-      payload: { id: res.id },
+      payload: { id },
     });
-    searchItemsDispatch({ type: "RESET_DISCOUNT", payload: { id: res.id } });
+    searchItemsDispatch({ type: "RESET_DISCOUNT", payload: { id } });
   }
 
   const manualRate = searchItemsState.rate?.[res.id];

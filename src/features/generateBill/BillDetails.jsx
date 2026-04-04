@@ -84,6 +84,19 @@ export function BillDetails({ setShowInvoice, setBillId }) {
     [estimatedBillAmount],
   );
 
+  const roundOffAmount = useMemo(() => {
+    const rounded = Number(roundedEstimatedBillAmount || 0);
+    const exact = Number(estimatedBillAmount || 0);
+    return Number((rounded - exact).toFixed(2));
+  }, [roundedEstimatedBillAmount, estimatedBillAmount]);
+
+  function formatSignedDecimalAmount(value) {
+    const amount = Number(value || 0);
+    const sign = amount > 0 ? "+" : amount < 0 ? "-" : "";
+
+    return `${sign}₹${Math.abs(amount).toFixed(2)}`;
+  }
+
   const selectedDealer = useMemo(() => {
     if (!state.dealer_id) return null;
     return dealers.find((dealer) => dealer.id === state.dealer_id) || null;
@@ -164,14 +177,24 @@ export function BillDetails({ setShowInvoice, setBillId }) {
           phone_from:
             state.invoice_type === STOCK_OUT ? mamaJiDetails.phoneNo : "",
           other_party_gst: "",
+          ...(state.invoice_type === STOCK_IN ? { invoice_items: [] } : {}),
         },
       });
+
+      if (state.invoice_type === STOCK_IN) {
+        setBillItemsPage(1);
+      }
 
       return;
     }
 
     const selected = dealers.find((dealer) => dealer.id === selectedId);
     if (!selected) return;
+
+    const shouldResetStockInItems =
+      state.invoice_type === STOCK_IN &&
+      Boolean(state.dealer_id) &&
+      state.dealer_id !== selected.id;
 
     dispatch({
       type: "SET_FIELDS",
@@ -183,6 +206,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
               address_to: selected.address || "",
               phone_to: selected.phone || "",
               other_party_gst: selected.gst || "",
+              ...(shouldResetStockInItems ? { invoice_items: [] } : {}),
             }
           : {
               dealer_id: selected.id,
@@ -190,8 +214,13 @@ export function BillDetails({ setShowInvoice, setBillId }) {
               address_from: selected.address || "",
               phone_from: selected.phone || "",
               other_party_gst: selected.gst || "",
+              ...(shouldResetStockInItems ? { invoice_items: [] } : {}),
             },
     });
+
+    if (shouldResetStockInItems) {
+      setBillItemsPage(1);
+    }
   }
 
   const generateInvoiceMutation = useMutation({
@@ -233,6 +262,22 @@ export function BillDetails({ setShowInvoice, setBillId }) {
         "Please select a dealer before generating the bill.",
       );
       return;
+    }
+
+    if (state.invoice_type === STOCK_IN) {
+      const missingCatalogItem = state.invoice_items.find((item) => {
+        const catalogId = String(
+          item.product_catalog_id || item.id || "",
+        ).trim();
+        return !catalogId;
+      });
+
+      if (missingCatalogItem) {
+        setErrorModalMessage(
+          `Selected item is missing product mapping: ${missingCatalogItem.name}. Remove and add it again.`,
+        );
+        return;
+      }
     }
 
     const amount = Number(depositedAmount);
@@ -283,7 +328,10 @@ export function BillDetails({ setShowInvoice, setBillId }) {
     const invoiceItemsDetails = state.invoice_items.map((item) => {
       // For stock_in, item.id is product_catalog.id.
       // For stock_out, item.id is inventory.id, so use product_catalog_id only.
-      const mappedProductCatalogId = item.product_catalog_id || null;
+      const mappedProductCatalogId =
+        state.invoice_type === STOCK_IN
+          ? String(item.product_catalog_id || item.id || "").trim() || null
+          : String(item.product_catalog_id || "").trim() || null;
 
       return {
         name: item.name,
@@ -504,51 +552,6 @@ export function BillDetails({ setShowInvoice, setBillId }) {
           </div>
         ) : null}
 
-        <div className="form-sub-container">
-          <div className="form-el-container">
-            <span>Dealer Address</span>
-            <input
-              className="formEl"
-              readOnly
-              type="text"
-              placeholder="Auto-filled from selected dealer"
-              value={
-                state.invoice_type === STOCK_OUT
-                  ? state.address_to
-                  : state.address_from
-              }
-            />
-          </div>
-
-          <div className="form-el-container">
-            <span>Dealer Phone No.</span>
-            <input
-              className="formEl"
-              readOnly
-              type="text"
-              placeholder="Auto-filled from selected dealer"
-              value={
-                state.invoice_type === STOCK_OUT
-                  ? state.phone_to
-                  : state.phone_from
-              }
-            />
-          </div>
-        </div>
-
-        <div className="form-sub-container party-gst-row">
-          <div className="form-el-container">
-            <span>Dealer GST No.</span>
-            <input
-              className="formEl"
-              readOnly
-              type="text"
-              placeholder="Auto-filled from selected dealer"
-              value={state.other_party_gst || ""}
-            />
-          </div>
-        </div>
-
         <div
           id="billItemsContainer"
           className={`scroll-hide ${state.invoice_items && state.invoice_items.length > 0 ? "" : "bill-items-empty"}`}
@@ -584,7 +587,10 @@ export function BillDetails({ setShowInvoice, setBillId }) {
           />
         ) : null}
         <div className="form-sub-container">
-          <p>Your Total : ₹{roundedEstimatedBillAmount}</p>
+          <div className="bill-total-summary">
+            <p>Your Total : ₹{roundedEstimatedBillAmount}</p>
+            <p>Round Off : {formatSignedDecimalAmount(roundOffAmount)}</p>
+          </div>
           <div className="form-sub-container2">
             <div>
               <em>CGST </em>{" "}

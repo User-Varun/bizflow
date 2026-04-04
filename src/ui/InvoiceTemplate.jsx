@@ -36,6 +36,31 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
     return Number(data?.grand_total || 0);
   }
 
+  function calcRawGrandTotal() {
+    const items = data?.invoice_items || [];
+
+    return items.reduce((sum, item) => {
+      const baseAmount = Number(item.rate || 0) * Number(item.product_qty || 0);
+      const cgstAmount = (baseAmount * Number(item.cgst || 0)) / 100;
+      const sgstAmount = (baseAmount * Number(item.sgst || 0)) / 100;
+      const discountAmount = (baseAmount * Number(item.discount || 0)) / 100;
+
+      return sum + baseAmount + cgstAmount + sgstAmount - discountAmount;
+    }, 0);
+  }
+
+  function calcRoundOffAmount() {
+    const roundOffFromApi = Number(data?.round_off);
+    if (Number.isFinite(roundOffFromApi)) {
+      return roundOffFromApi;
+    }
+
+    const roundedTotal = clacGrandTotal();
+    const rawTotal = calcRawGrandTotal();
+
+    return Number((roundedTotal - rawTotal).toFixed(2));
+  }
+
   function calcDiscountTotal() {
     const items = data?.invoice_items || [];
 
@@ -50,6 +75,14 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
 
   function formatAmt(n) {
     return `₹${Math.round(Number(n || 0))}`;
+  }
+
+  function formatDecimalAmt(n) {
+    const value = Number(n || 0);
+    const absValue = Math.abs(value);
+    const sign = value > 0 ? "+" : value < 0 ? "-" : "";
+
+    return `${sign}₹${absValue.toFixed(2)}`;
   }
 
   function numberToWords(num) {
@@ -149,12 +182,32 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
 
   function formatDate(dateStr) {
     const date = new Date(dateStr);
-    const formatted = `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
+    if (Number.isNaN(date.getTime())) return "-";
+
+    const day = String(date.getUTCDate()).padStart(2, "0");
+    const monthNames = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    const month = monthNames[date.getUTCMonth()] || "";
+    const year = date.getUTCFullYear();
+    const formatted = `${day}-${month}-${year}`;
 
     return formatted;
   }
 
   const invoiceType = String(data?.invoice_type || "").toLowerCase();
+  const isStockIn = invoiceType === "stock_in";
   const companyGstin = String(data?.company_gstin || "").trim();
   const partyGstin = String(data?.other_party_gst || "").trim();
 
@@ -239,6 +292,18 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
                       </section>
 
                       <table className="inv-table">
+                        <colgroup>
+                          <col className="inv-col-sn" />
+                          <col className="inv-col-qty" />
+                          <col className="inv-col-product" />
+                          <col className="inv-col-hsn" />
+                          <col className="inv-col-mrp" />
+                          <col className="inv-col-rate" />
+                          <col className="inv-col-discount" />
+                          <col className="inv-col-sgst" />
+                          <col className="inv-col-cgst" />
+                          <col className="inv-col-amount" />
+                        </colgroup>
                         <thead>
                           <tr>
                             <th>Sn.</th>
@@ -247,7 +312,7 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
                             <th>HSN</th>
                             <th>MRP</th>
                             <th>RATE</th>
-                            <th>Discount</th>
+                            <th>DIS</th>
                             <th>SGST</th>
                             <th>CGST</th>
                             <th>Amount</th>
@@ -307,33 +372,45 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
                             <p className="in-words">
                               Rs. {numberToWords(clacGrandTotal())}
                             </p>
-                            <div className="terms">
-                              <a href="#">Terms & Conditions</a>
-                            </div>
-                            <div className="terms-more">
-                              <p>
-                                Goods once sold will not be taken back or
-                                exchanged.
-                              </p>
-                              <span>
-                                Bills not paid due date will attract 24%
-                                interest.
-                              </span>
-                            </div>
-                            <div className="bank">
-                              <span>
-                                <strong>A/C NO: </strong>{" "}
-                                {data.account_number || "-"}
-                              </span>
-                              <span>
-                                <strong>IFSC CODE: </strong>{" "}
-                                {data.ifsc_code || "-"}
-                              </span>
-                            </div>
+                            {!isStockIn ? (
+                              <>
+                                <div className="terms">
+                                  <a href="#">Terms & Conditions</a>
+                                </div>
+                                <div className="terms-more">
+                                  <p>
+                                    Goods once sold will not be taken back or
+                                    exchanged.
+                                  </p>
+                                  <span>
+                                    Bills not paid due date will attract 24%
+                                    interest.
+                                  </span>
+                                </div>
+                                <div className="bank">
+                                  <span>
+                                    <strong>A/C NO: </strong>{" "}
+                                    {data.account_number || "-"}
+                                  </span>
+                                  <span>
+                                    <strong>IFSC CODE: </strong>{" "}
+                                    {data.ifsc_code || "-"}
+                                  </span>
+                                </div>
+                              </>
+                            ) : null}
                           </div>
                           <div className="inner-right-block">
-                            <img className="qr" src={qrSrc} alt="QR code" />
-                            <span>For V.S. Enterprises</span>
+                            {!isStockIn ? (
+                              <>
+                                <img className="qr" src={qrSrc} alt="QR code" />
+                                <span>
+                                  For {data.invoice_from || "Business"}
+                                </span>
+                              </>
+                            ) : (
+                              <span>Seller: {data.invoice_from || "-"}</span>
+                            )}
                           </div>
                           <div className="inner-middle-down-block">
                             <a href="#" className="auth-sig">
@@ -353,6 +430,12 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
                           <div className="tot-line">
                             <span>DISCOUNT</span>
                             <span>{formatAmt(calcDiscountTotal())}</span>
+                          </div>
+                          <div className="tot-line">
+                            <span>ROUND OFF</span>
+                            <span>
+                              {formatDecimalAmt(calcRoundOffAmount())}
+                            </span>
                           </div>
                           <div className="tot-line grand">
                             <span>GRAND TOTAL</span>

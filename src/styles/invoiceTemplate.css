@@ -114,33 +114,47 @@ body {
   text-align: start !important;
 }
 
-.inv-table th:nth-child(4),
-.inv-table td:nth-child(4) {
+.inv-col-sn {
+  width: 3%;
+}
+
+.inv-col-qty {
+  width: 5%;
+}
+
+.inv-col-product {
+  width: 38%;
+}
+
+.inv-col-hsn {
+  width: 7%;
+}
+
+.inv-col-mrp,
+.inv-col-rate {
   width: 8%;
 }
 
-.inv-table th:nth-child(5),
-.inv-table td:nth-child(5),
-.inv-table th:nth-child(6),
-.inv-table td:nth-child(6),
-.inv-table th:nth-child(7),
-.inv-table td:nth-child(7),
-.inv-table th:nth-child(8),
-.inv-table td:nth-child(8),
-.inv-table th:nth-child(9),
-.inv-table td:nth-child(9) {
-  width: 9%;
-  white-space: nowrap;
+.inv-col-discount {
+  width: 7%;
 }
 
-.inv-table th:nth-child(10),
-.inv-table td:nth-child(10) {
-  width: 12%;
-  white-space: nowrap;
+.inv-col-sgst,
+.inv-col-cgst {
+  width: 6%;
 }
+
+.inv-col-amount {
+  width: 12%;
+}
+
 .prod-col {
-  width: 28%;
   word-break: break-word;
+}
+
+.inv-table th:not(.prod-col),
+.inv-table td:not(.prod-col) {
+  white-space: nowrap;
 }
 .discount-cell {
   font-weight: 700;
@@ -433,7 +447,7 @@ body {
     break-after: page !important;
     display: flex !important;
     flex-direction: column !important;
-    gap: 0 !important;
+    gap: 10mm !important;
   }
 
   .invoice-print-sheet:last-child {
@@ -531,6 +545,24 @@ body {
     align-items: center !important;
   }
 
+  .bill-meta .container-pad span {
+    font-size: 0.62rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .bill-meta .inv-right-inner,
+  .bill-meta .inv-right-inner span {
+    font-size: 0.76rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .bill-meta .container-pad-2,
+  .bill-meta .inv-right-inner {
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+  }
+
   .subTotalContainer {
     display: grid !important;
     grid-template-columns: 70% 30% !important;
@@ -543,7 +575,14 @@ body {
     border-left: 1px solid black !important;
     margin: 0 !important;
     padding: 0.22rem 0.42rem !important;
+    font-size: 0.68rem !important;
+    line-height: 1.2 !important;
     box-sizing: border-box !important;
+  }
+
+  .inner-stc span {
+    font-size: inherit !important;
+    line-height: inherit !important;
   }
 
   .inv-table {

@@ -341,6 +341,10 @@
   align-content: center;
 }
 
+.cardItem-in-prod-catalog .product-compact-meta {
+  flex-wrap: wrap;
+}
+
 .cardItem-compact:not(.cardItem-in-prod-catalog) .unit-chip,
 .cardItem-compact:not(.cardItem-in-prod-catalog) .hsn-chip {
   max-width: none;
@@ -367,6 +371,12 @@
 .unit-chip,
 .hsn-chip {
   max-width: 7.6rem;
+}
+
+.dealer-chip {
+  color: #6c3f26;
+  background: #fff2e8;
+  border-color: #f2d3be;
 }
 
 .qty-highlight {

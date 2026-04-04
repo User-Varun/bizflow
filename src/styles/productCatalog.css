@@ -175,6 +175,27 @@ body {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
+.prodCBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.productCatalogDealerFilter {
+  border: 1px solid #d8d3cd;
+  border-radius: 0.6rem;
+  background-color: #f3efea;
+  color: #2f2a26;
+  padding: 0.78rem 0.9rem;
+  font-weight: 700;
+  min-width: 220px;
+}
+
+.productCatalogCtaLink {
+  text-decoration: none;
+  text-align: center;
+  display: inline-block;
+}
+
 #innerHeader {
   display: flex;
   gap: 1rem;
@@ -200,6 +221,11 @@ body {
 
   .prodCBtn {
     width: 100%;
+  }
+
+  .productCatalogDealerFilter {
+    width: 100%;
+    min-width: 0;
   }
 }
 

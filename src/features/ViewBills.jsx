@@ -148,14 +148,32 @@ export function ViewBills() {
       "editInvoiceSourceItems",
       editingInvoiceId,
       invoiceToEditQuery.data?.result?.invoice_type,
+      invoiceToEditQuery.data?.result?.dealer_id,
     ],
     queryFn: async () => {
       const invoiceType = invoiceToEditQuery.data?.result?.invoice_type;
+      const dealerId = String(
+        invoiceToEditQuery.data?.result?.dealer_id || "",
+      ).trim();
       const sourcePath =
         invoiceType === "stock_in" ? "productCatalog" : "inventory";
 
+      if (invoiceType === "stock_in" && !dealerId) {
+        return [];
+      }
+
+      const params = new URLSearchParams({
+        page: "1",
+        pageSize: "200",
+        search: "",
+      });
+
+      if (invoiceType === "stock_in") {
+        params.set("dealer_id", dealerId);
+      }
+
       const response = await requestJSON(
-        `${baseUrl}/${sourcePath}?page=1&pageSize=200&search=`,
+        `${baseUrl}/${sourcePath}?${params.toString()}`,
         {
           method: "GET",
         },

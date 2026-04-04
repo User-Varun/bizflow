@@ -18,6 +18,7 @@ export function ProductCard({
   const stockQty = Number(res?.product_qty ?? res?.item_qty ?? 0);
   const unitLabel = `${res?.unit_qty ?? ""} ${res?.unit_name ?? ""}`.trim();
   const hsnLabel = `HSN: ${res?.hsn_code ?? ""}`;
+  const dealerLabel = res?.dealer?.name ? `Dealer: ${res.dealer.name}` : "";
   const showInventoryTopQty = compact && !prodCat && !billDetailsCard;
 
   return (
@@ -83,6 +84,14 @@ export function ProductCard({
             {billDetailsCard ? (
               <span className="product-compact-chip">
                 Disc: {Number(res?.discount || 0)}%
+              </span>
+            ) : null}
+            {prodCat && dealerLabel ? (
+              <span
+                className="product-compact-chip trunc-chip dealer-chip"
+                title={dealerLabel}
+              >
+                {truncate(dealerLabel, 22)}
               </span>
             ) : null}
             <span

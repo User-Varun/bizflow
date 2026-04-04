@@ -1,6 +1,7 @@
 import "../index.css";
 import "../styles/productCatalog.css";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router";
 import { SearchBar } from "../ui/SearchBar";
 import { ProductCard } from "../ui/ProductCard";
 import { PaginationComp } from "../ui/PaginationComp";
@@ -10,6 +11,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const DEFAULT_UNIT_OPTIONS = ["pcs", "box", "jar"];
 const CUSTOM_UNIT_OPTION = "__custom_unit__";
+const baseUrl = import.meta.env.VITE_API_URL;
+const SUPPLIER_TYPE = "stock_in";
 
 export function ProductCatalog() {
   const queryClient = useQueryClient();
@@ -20,6 +23,8 @@ export function ProductCatalog() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingProductId, setEditingProductId] = useState(null);
   const [productToDelete, setProductToDelete] = useState(null);
+  const [activeDealerId, setActiveDealerId] = useState("");
+  const [formDealerId, setFormDealerId] = useState("");
 
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
@@ -43,15 +48,57 @@ export function ProductCatalog() {
       ? [...DEFAULT_UNIT_OPTIONS, unitName]
       : DEFAULT_UNIT_OPTIONS;
 
-  const { data, isLoading, isError, error, isFetching } = useQuery({
-    queryKey: ["productCatalog", { page, pageSize, search: normalizedSearch }],
+  const suppliersQuery = useQuery({
+    queryKey: ["productCatalogSuppliers"],
     queryFn: () =>
       requestJSON(
-        `${import.meta.env.VITE_API_URL}/productCatalog?page=${page}&pageSize=${pageSize}&search=${encodeURIComponent(normalizedSearch)}`,
+        `${baseUrl}/dealers?invoice_type=${SUPPLIER_TYPE}&page=1&pageSize=200`,
+      ),
+    staleTime: 60000,
+  });
+
+  const suppliers = useMemo(() => {
+    return Array.isArray(suppliersQuery.data?.result)
+      ? suppliersQuery.data.result
+      : [];
+  }, [suppliersQuery.data]);
+
+  useEffect(() => {
+    if (suppliers.length === 0) {
+      setActiveDealerId("");
+      setFormDealerId("");
+      return;
+    }
+
+    const hasCurrentDealer = suppliers.some(
+      (dealer) => dealer.id === activeDealerId,
+    );
+
+    if (!hasCurrentDealer) {
+      const defaultDealerId = suppliers[0].id;
+      setActiveDealerId(defaultDealerId);
+      setFormDealerId(defaultDealerId);
+    }
+  }, [suppliers, activeDealerId]);
+
+  const { data, isLoading, isError, error, isFetching } = useQuery({
+    queryKey: [
+      "productCatalog",
+      {
+        page,
+        pageSize,
+        search: normalizedSearch,
+        dealerId: activeDealerId,
+      },
+    ],
+    queryFn: () =>
+      requestJSON(
+        `${baseUrl}/productCatalog?page=${page}&pageSize=${pageSize}&search=${encodeURIComponent(normalizedSearch)}&dealer_id=${encodeURIComponent(activeDealerId)}`,
         {
           method: "GET",
         },
       ),
+    enabled: Boolean(activeDealerId),
     staleTime: 30000,
     placeholderData: (previousData) => previousData,
   });
@@ -59,16 +106,13 @@ export function ProductCatalog() {
   const addOrUpdateMutation = useMutation({
     mutationFn: async (payload) => {
       if (isEditMode && editingProductId) {
-        return requestJSON(
-          `${import.meta.env.VITE_API_URL}/productCatalog/${editingProductId}`,
-          {
-            method: "PATCH",
-            body: JSON.stringify(payload),
-          },
-        );
+        return requestJSON(`${baseUrl}/productCatalog/${editingProductId}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
       }
 
-      return requestJSON(`${import.meta.env.VITE_API_URL}/productCatalog`, {
+      return requestJSON(`${baseUrl}/productCatalog`, {
         method: "POST",
         body: JSON.stringify(payload),
       });
@@ -86,12 +130,9 @@ export function ProductCatalog() {
 
   const deleteMutation = useMutation({
     mutationFn: (productId) =>
-      requestJSON(
-        `${import.meta.env.VITE_API_URL}/productCatalog/${productId}`,
-        {
-          method: "DELETE",
-        },
-      ),
+      requestJSON(`${baseUrl}/productCatalog/${productId}`, {
+        method: "DELETE",
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["productCatalog"] });
     },
@@ -100,17 +141,11 @@ export function ProductCatalog() {
     },
   });
 
-  const products = data?.result || [];
-  const total = data?.total || 0;
-
-  function toggleForm() {
-    setIsOpen(!isOpen);
-    if (isOpen) {
-      resetForm();
-    }
-  }
+  const products = activeDealerId ? data?.result || [] : [];
+  const total = activeDealerId ? Number(data?.total || 0) : 0;
 
   function resetForm() {
+    setFormDealerId(activeDealerId || "");
     setName("");
     setBrand("");
     setMrp(0);
@@ -123,10 +158,26 @@ export function ProductCatalog() {
     setEditingProductId(null);
   }
 
+  function closeForm() {
+    if (addOrUpdateMutation.isPending) return;
+    resetForm();
+    setErrMsg("");
+    setIsOpen(false);
+  }
+
+  function openAddForm() {
+    if (!activeDealerId) return;
+    resetForm();
+    setFormDealerId(activeDealerId);
+    setErrMsg("");
+    setIsOpen(true);
+  }
+
   function handleEdit(product) {
     setErrMsg("");
     setIsEditMode(true);
     setEditingProductId(product.id);
+    setFormDealerId(product.dealer_id || product?.dealer?.id || activeDealerId);
     setName(product.name);
     setBrand(product.brand);
     setMrp(product.mrp);
@@ -168,6 +219,14 @@ export function ProductCatalog() {
     setPage(1);
   }
 
+  function handleDealerFilterChange(nextDealerId) {
+    setActiveDealerId(nextDealerId);
+    setPage(1);
+    if (!isEditMode) {
+      setFormDealerId(nextDealerId);
+    }
+  }
+
   function handleSubmit(e) {
     e.preventDefault();
     setErrMsg("");
@@ -179,6 +238,7 @@ export function ProductCatalog() {
       .toLowerCase();
 
     if (
+      !formDealerId ||
       !name ||
       !brand ||
       rate === "" ||
@@ -203,6 +263,7 @@ export function ProductCatalog() {
     }
 
     const payload = {
+      dealer_id: formDealerId,
       name: name.trim(),
       brand: brand.trim(),
       mrp: Number(mrp),
@@ -215,6 +276,18 @@ export function ProductCatalog() {
     addOrUpdateMutation.mutate(payload);
   }
 
+  if (suppliersQuery.isLoading) {
+    return <LoadingSpinner label="Loading suppliers..." />;
+  }
+
+  if (suppliersQuery.isError) {
+    return <p>{suppliersQuery.error?.message || "Failed to load suppliers"}</p>;
+  }
+
+  if (suppliers.length > 0 && !activeDealerId) {
+    return <LoadingSpinner label="Loading products..." />;
+  }
+
   if (isLoading) return <LoadingSpinner label="Loading products..." />;
   if (isError) return <p>{error?.message || "Failed to load products"}</p>;
 
@@ -223,7 +296,7 @@ export function ProductCatalog() {
       className={`below-navbar-content-container productCatalogShell ${isOpen || productToDelete ? "blurred" : ""}`}
     >
       {isOpen && (
-        <div className="modal-overlay" onClick={toggleForm}>
+        <div className="modal-overlay" onClick={closeForm}>
           <div
             className="modal-content"
             role="dialog"
@@ -234,6 +307,21 @@ export function ProductCatalog() {
               {isEditMode ? "Edit Product" : "Add Product"}
             </h1>
             <form className="container-addProd" onSubmit={handleSubmit}>
+              <select
+                value={formDealerId}
+                onChange={(e) => setFormDealerId(e.target.value)}
+                required
+              >
+                <option value="" disabled>
+                  Select supplier dealer
+                </option>
+                {suppliers.map((dealer) => (
+                  <option value={dealer.id} key={dealer.id}>
+                    {dealer.name} ({dealer.phone})
+                  </option>
+                ))}
+              </select>
+
               <input
                 type="text"
                 value={name}
@@ -338,11 +426,9 @@ export function ProductCatalog() {
 
             <button
               className="modal-close "
-              onClick={() => {
-                resetForm();
-                setIsOpen(false);
-              }}
+              onClick={closeForm}
               aria-label="Close"
+              disabled={addOrUpdateMutation.isPending}
             >
               ×
             </button>
@@ -407,12 +493,43 @@ export function ProductCatalog() {
           searchQuery={searchQuery}
           setSearchQuery={handleSearchChange}
         />
-        <button className="prodCBtn" onClick={toggleForm}>
+
+        <select
+          className="productCatalogDealerFilter"
+          value={activeDealerId}
+          onChange={(e) => handleDealerFilterChange(e.target.value)}
+          aria-label="Filter products by supplier"
+        >
+          {suppliers.map((dealer) => (
+            <option value={dealer.id} key={dealer.id}>
+              {dealer.name}
+            </option>
+          ))}
+        </select>
+
+        <button
+          className="prodCBtn"
+          onClick={openAddForm}
+          disabled={!activeDealerId}
+        >
           + Add Product
         </button>
       </div>
 
-      {products.length > 0 ? (
+      {suppliers.length === 0 ? (
+        <div className="product-catalog-empty">
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M8 18a2 2 0 0 1 2-2h44a2 2 0 0 1 1.73 1l6 10.4a2 2 0 0 1 .27 1v18.6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V28.4a2 2 0 0 1 .27-1L8 17.98V18Zm1.85 2-4.7 8.13H58.9L54.2 20H9.85ZM4 30v16h56V30H4Zm16 4h4v8h-4v-8Zm8 0h4v8h-4v-8Zm8 0h4v8h-4v-8Z" />
+          </svg>
+          <h1>No suppliers yet</h1>
+          <p>
+            Create a supplier dealer first, then add products to that supplier.
+          </p>
+          <Link to="/dealers" className="prodCBtn productCatalogCtaLink">
+            Go to Dealers
+          </Link>
+        </div>
+      ) : products.length > 0 ? (
         <>
           <section id="productCatalogContainer" className="scroll-hide">
             {products.map((res) => (
@@ -445,7 +562,7 @@ export function ProductCatalog() {
           <p>
             {normalizedSearch
               ? "No products match your search."
-              : "Add a product to see it appear here."}
+              : "Add a product for this supplier to see it appear here."}
           </p>
         </div>
       )}
