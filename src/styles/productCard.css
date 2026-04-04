@@ -630,14 +630,38 @@
 }
 
 .bill-item-card .bill-price-controls {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.42rem;
   width: 100%;
 }
 
 .bill-item-card .bill-price-controls-stock-in {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-direction: column;
+}
+
+.bill-item-card .bill-field-row {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  gap: 0.56rem;
+  align-items: center;
+  width: 100%;
+}
+
+.bill-item-card .bill-field-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #334155;
+  white-space: nowrap;
+  line-height: 1.1;
+  text-align: left;
+}
+
+.bill-item-card .bill-field-row .rate-input {
+  height: 2rem;
+  font-size: 0.82rem;
+  padding: 0.36rem 0.5rem;
 }
 
 .bill-item-card .rate-input {

@@ -2,6 +2,12 @@ import "../styles/invoiceTemplate.css";
 import { useQuery } from "@tanstack/react-query";
 import { requestJSON } from "../styles/utils/requestJSON";
 import { LoadingSpinner } from "./LoadingSpinner";
+import {
+  formatCurrencyAmount,
+  formatPercent,
+  formatSignedCurrencyAmount,
+  toFixedTwo,
+} from "../lib/formatters";
 
 const baseUrl = import.meta.env.VITE_API_URL;
 const ITEMS_PER_PAGE = 6;
@@ -41,11 +47,12 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
 
     return items.reduce((sum, item) => {
       const baseAmount = Number(item.rate || 0) * Number(item.product_qty || 0);
-      const cgstAmount = (baseAmount * Number(item.cgst || 0)) / 100;
-      const sgstAmount = (baseAmount * Number(item.sgst || 0)) / 100;
       const discountAmount = (baseAmount * Number(item.discount || 0)) / 100;
+      const taxableAmount = Math.max(0, baseAmount - discountAmount);
+      const cgstAmount = (taxableAmount * Number(item.cgst || 0)) / 100;
+      const sgstAmount = (taxableAmount * Number(item.sgst || 0)) / 100;
 
-      return sum + baseAmount + cgstAmount + sgstAmount - discountAmount;
+      return sum + taxableAmount + cgstAmount + sgstAmount;
     }, 0);
   }
 
@@ -74,15 +81,11 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
   }
 
   function formatAmt(n) {
-    return `₹${Math.round(Number(n || 0))}`;
+    return formatCurrencyAmount(n);
   }
 
   function formatDecimalAmt(n) {
-    const value = Number(n || 0);
-    const absValue = Math.abs(value);
-    const sign = value > 0 ? "+" : value < 0 ? "-" : "";
-
-    return `${sign}₹${absValue.toFixed(2)}`;
+    return formatSignedCurrencyAmount(n);
   }
 
   function numberToWords(num) {
@@ -327,14 +330,23 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
                               const discountPct = Number(item.discount || 0);
                               const discountAmount =
                                 (baseAmount * discountPct) / 100;
-                              const lineAmount = baseAmount - discountAmount;
+                              const taxableAmount = Math.max(
+                                0,
+                                baseAmount - discountAmount,
+                              );
+                              const cgstAmount =
+                                (taxableAmount * Number(item.cgst || 0)) / 100;
+                              const sgstAmount =
+                                (taxableAmount * Number(item.sgst || 0)) / 100;
+                              const lineAmount =
+                                taxableAmount + cgstAmount + sgstAmount;
 
                               return (
                                 <tr key={item.id || `${pageIndex}-${idx}`}>
                                   <td>
                                     {pageIndex * ITEMS_PER_PAGE + idx + 1}
                                   </td>
-                                  <td>{item.product_qty}</td>
+                                  <td>{toFixedTwo(item.product_qty)}</td>
                                   <td className="prod-col prod-name">
                                     {item.name}
                                   </td>
@@ -342,10 +354,10 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
                                   <td>{formatAmt(item.mrp ?? 0)}</td>
                                   <td>{formatAmt(item.rate ?? 0)}</td>
                                   <td className="discount-cell">
-                                    {Number(item.discount || 0)}%
+                                    {formatPercent(item.discount || 0)}
                                   </td>
-                                  <td>{Number(item.sgst || 0)}%</td>
-                                  <td>{Number(item.cgst || 0)}%</td>
+                                  <td>{formatPercent(item.sgst || 0)}</td>
+                                  <td>{formatPercent(item.cgst || 0)}</td>
                                   <td>{formatAmt(lineAmount)}</td>
                                 </tr>
                               );

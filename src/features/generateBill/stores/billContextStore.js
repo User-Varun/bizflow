@@ -15,9 +15,6 @@ export const initialState = {
   phone_to: "",
   other_party_gst: "",
 
-  cgst: "2.5",
-  sgst: "2.5",
-
   invoice_no: "",
   total_amt: 0,
   pending_amt: 0,

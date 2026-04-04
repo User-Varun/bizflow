@@ -6,6 +6,8 @@ export const initalValue = {
   rate: {},
   purchaseRatePercent: {},
   discount: {},
+  cgst: {},
+  sgst: {},
   quantities: {},
   data: [],
   searchQuery: "",
@@ -18,7 +20,9 @@ export function reducerFn(state, action) {
         ...state,
         quantities: {
           ...state.quantities,
-          [action.payload.id]: (state.quantities[action.payload.id] || 0) + 1,
+          [action.payload.id]: (
+            Number(state.quantities[action.payload.id] || 0) + 1
+          ).toFixed(2),
         },
       };
     case "DEC_QTY":
@@ -28,8 +32,8 @@ export function reducerFn(state, action) {
           ...state.quantities,
           [action.payload.id]: Math.max(
             0,
-            (state.quantities[action.payload.id] || 0) - 1,
-          ),
+            Number(state.quantities[action.payload.id] || 0) - 1,
+          ).toFixed(2),
         },
       };
 
@@ -47,7 +51,7 @@ export function reducerFn(state, action) {
 
       const parsedQty = Number(rawQty);
       const normalizedQty = Number.isFinite(parsedQty)
-        ? Math.max(0, Math.floor(parsedQty))
+        ? Math.max(0, parsedQty).toFixed(2)
         : 0;
 
       return {
@@ -86,6 +90,24 @@ export function reducerFn(state, action) {
         },
       };
 
+    case "SET_CGST":
+      return {
+        ...state,
+        cgst: {
+          ...state.cgst,
+          [action.payload.id]: action.payload.inputFieldValue,
+        },
+      };
+
+    case "SET_SGST":
+      return {
+        ...state,
+        sgst: {
+          ...state.sgst,
+          [action.payload.id]: action.payload.inputFieldValue,
+        },
+      };
+
     case "SET_SEARCH_QUERY":
       return {
         ...state,
@@ -97,7 +119,7 @@ export function reducerFn(state, action) {
         ...state,
         quantities: {
           ...state.quantities,
-          [action.payload.id]: 0,
+          [action.payload.id]: "0.00",
         },
       };
     case "RESET_RATE":
@@ -122,6 +144,22 @@ export function reducerFn(state, action) {
         discount: {
           ...state.discount,
           [action.payload.id]: 0,
+        },
+      };
+    case "RESET_CGST":
+      return {
+        ...state,
+        cgst: {
+          ...state.cgst,
+          [action.payload.id]: 2.5,
+        },
+      };
+    case "RESET_SGST":
+      return {
+        ...state,
+        sgst: {
+          ...state.sgst,
+          [action.payload.id]: 2.5,
         },
       };
     case "RESET_SEARCH_QUERY":

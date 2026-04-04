@@ -6,6 +6,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { requestJSON } from "../../styles/utils/requestJSON.js";
 import { PaginationComp } from "../../ui/PaginationComp.jsx";
+import {
+  formatCurrencyAmount,
+  formatSignedCurrencyAmount,
+  toFixedTwo,
+} from "../../lib/formatters";
 const STOCK_IN = import.meta.env.VITE_STOCK_IN;
 const STOCK_OUT = import.meta.env.VITE_STOCK_OUT;
 const baseUrl = import.meta.env.VITE_API_URL;
@@ -54,30 +59,26 @@ export function BillDetails({ setShowInvoice, setBillId }) {
     return (state.invoice_items || []).slice(start, end);
   }, [state.invoice_items, billItemsPage]);
 
-  const totalAmount = useMemo(() => {
-    return state.invoice_items.reduce(
-      (acc, item) => acc + Number(item.rate || 0) * Number(item.item_qty || 0),
-      0,
+  const estimatedBillAmount = useMemo(() => {
+    return Number(
+      state.invoice_items
+        .reduce((acc, item) => {
+          const baseAmount =
+            Number(item.rate || 0) * Number(item.item_qty || 0);
+          const discountPercent = Math.max(
+            0,
+            Math.min(100, Number(item.discount || 0)),
+          );
+          const discountValue = (baseAmount * discountPercent) / 100;
+          const taxableAmount = Math.max(0, baseAmount - discountValue);
+          const cgstAmount = (taxableAmount * Number(item.cgst || 0)) / 100;
+          const sgstAmount = (taxableAmount * Number(item.sgst || 0)) / 100;
+
+          return acc + taxableAmount + cgstAmount + sgstAmount;
+        }, 0)
+        .toFixed(2),
     );
   }, [state.invoice_items]);
-
-  const discountAmount = useMemo(() => {
-    return state.invoice_items.reduce((acc, item) => {
-      const baseAmount = Number(item.rate || 0) * Number(item.item_qty || 0);
-      const discountPercent = Number(item.discount || 0);
-
-      return acc + (baseAmount * discountPercent) / 100;
-    }, 0);
-  }, [state.invoice_items]);
-
-  const estimatedBillAmount = useMemo(() => {
-    const cgst = Number(state.cgst || 0);
-    const sgst = Number(state.sgst || 0);
-    const taxPercent = cgst + sgst;
-    const taxAmount = (totalAmount * taxPercent) / 100;
-
-    return Number((totalAmount + taxAmount - discountAmount).toFixed(2));
-  }, [totalAmount, discountAmount, state.cgst, state.sgst]);
 
   const roundedEstimatedBillAmount = useMemo(
     () => Math.round(Number(estimatedBillAmount || 0)),
@@ -89,13 +90,6 @@ export function BillDetails({ setShowInvoice, setBillId }) {
     const exact = Number(estimatedBillAmount || 0);
     return Number((rounded - exact).toFixed(2));
   }, [roundedEstimatedBillAmount, estimatedBillAmount]);
-
-  function formatSignedDecimalAmount(value) {
-    const amount = Number(value || 0);
-    const sign = amount > 0 ? "+" : amount < 0 ? "-" : "";
-
-    return `${sign}₹${Math.abs(amount).toFixed(2)}`;
-  }
 
   const selectedDealer = useMemo(() => {
     if (!state.dealer_id) return null;
@@ -122,8 +116,6 @@ export function BillDetails({ setShowInvoice, setBillId }) {
         invoice_from: mamaJiDetails.name,
         address_from: mamaJiDetails.address,
         phone_from: mamaJiDetails.phoneNo,
-        cgst: "2.5",
-        sgst: "2.5",
         invoice_items: [],
         invoice_no: "",
         total_amt: 0,
@@ -342,8 +334,8 @@ export function BillDetails({ setShowInvoice, setBillId }) {
         product_qty: Number(item.item_qty || 0),
         rate: Number(item.rate || 0),
         mrp: Number(item.mrp || 0),
-        cgst: Number(state.cgst || 0),
-        sgst: Number(state.sgst || 0),
+        cgst: Number(item.cgst || 2.5),
+        sgst: Number(item.sgst || 2.5),
         discount: Number(item.discount || 0),
         product_catalog_id: mappedProductCatalogId,
       };
@@ -588,42 +580,8 @@ export function BillDetails({ setShowInvoice, setBillId }) {
         ) : null}
         <div className="form-sub-container">
           <div className="bill-total-summary">
-            <p>Your Total : ₹{roundedEstimatedBillAmount}</p>
-            <p>Round Off : {formatSignedDecimalAmount(roundOffAmount)}</p>
-          </div>
-          <div className="form-sub-container2">
-            <div>
-              <em>CGST </em>{" "}
-              <input
-                className="formEl2"
-                required
-                type="text"
-                placeholder="2.5"
-                value={state.cgst}
-                onChange={(e) =>
-                  dispatch({
-                    type: "SET_FIELDS",
-                    payload: { cgst: e.target.value },
-                  })
-                }
-              />
-            </div>
-            <div>
-              <em>SGST </em>{" "}
-              <input
-                className="formEl2"
-                required
-                type="text"
-                placeholder="2.5"
-                value={state.sgst}
-                onChange={(e) =>
-                  dispatch({
-                    type: "SET_FIELDS",
-                    payload: { sgst: e.target.value },
-                  })
-                }
-              />
-            </div>
+            <p>Your Total : {formatCurrencyAmount(roundedEstimatedBillAmount)}</p>
+            <p>Round Off : {formatSignedCurrencyAmount(roundOffAmount)}</p>
           </div>
         </div>
 
@@ -647,6 +605,9 @@ export function BillDetails({ setShowInvoice, setBillId }) {
               step="0.01"
               value={depositedAmount}
               onChange={(e) => setDepositedAmount(e.target.value)}
+              onBlur={(e) =>
+                setDepositedAmount(toFixedTwo(e.target.value, 0, { clampMin: 0 }))
+              }
               placeholder="0"
             />
           </div>

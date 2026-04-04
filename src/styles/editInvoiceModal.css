@@ -123,6 +123,7 @@
 
 .edit-invoice-items-table {
   width: 100%;
+  min-width: 760px;
   border-collapse: collapse;
 }
 

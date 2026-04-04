@@ -1,5 +1,6 @@
 import "../styles/billViewCard.css";
 import { useEffect, useState } from "react";
+import { formatCurrencyAmount, toFixedTwo } from "../lib/formatters";
 
 export function BillViewCard({
   res,
@@ -70,7 +71,6 @@ export function BillViewCard({
   })();
 
   const pendingAmount = Number(res?.pending_amount || 0);
-  const roundedPendingAmount = Math.round(pendingAmount);
   const isPaid = String(res?.bill_state || "") === "paid" || pendingAmount <= 0;
 
   async function handlePay() {
@@ -158,7 +158,7 @@ export function BillViewCard({
         <div className="billCardField billCardFieldPending">
           <p className="billCardLabel">Pending</p>
           <p className="billCardValue billPendingValue">
-            ₹{roundedPendingAmount}
+            {formatCurrencyAmount(pendingAmount)}
           </p>
         </div>
       </div>
@@ -173,6 +173,7 @@ export function BillViewCard({
             placeholder="Pay amount"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            onBlur={(e) => setAmount(toFixedTwo(e.target.value, 0, { clampMin: 0 }))}
             disabled={isPaid || isPaying}
           />
           <select

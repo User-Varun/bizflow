@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { requestJSON } from "../styles/utils/requestJSON";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { PaginationComp } from "../ui/PaginationComp";
+import { formatCurrencyAmount, toFixedTwo } from "../lib/formatters";
 import "../styles/dealerProfile.css";
 
 const baseUrl = import.meta.env.VITE_API_URL;
@@ -332,11 +333,11 @@ export function DealerProfile() {
                   </p>
                   <p>
                     <strong>Total:</strong> Rs.{" "}
-                    {Math.round(Number(invoice.grand_total || 0))}
+                    {toFixedTwo(invoice.grand_total || 0)}
                   </p>
                   <p>
                     <strong>Pending:</strong> Rs.{" "}
-                    {Math.round(Number(invoice.pending_amount || 0))}
+                    {toFixedTwo(invoice.pending_amount || 0)}
                   </p>
                 </article>
               ))}
@@ -378,24 +379,24 @@ export function DealerProfile() {
             <article className="ledger-summary-card">
               <span>Total Invoiced</span>
               <strong>
-                Rs. {Math.round(Number(ledgerSummary.total_invoiced || 0))}
+                {formatCurrencyAmount(ledgerSummary.total_invoiced || 0)}
               </strong>
             </article>
             <article className="ledger-summary-card">
               <span>Total Paid</span>
               <strong>
-                Rs. {Math.round(Number(ledgerSummary.total_paid || 0))}
+                {formatCurrencyAmount(ledgerSummary.total_paid || 0)}
               </strong>
             </article>
             <article className="ledger-summary-card">
               <span>Total Pending</span>
               <strong>
-                Rs. {Math.round(Number(ledgerSummary.total_pending || 0))}
+                {formatCurrencyAmount(ledgerSummary.total_pending || 0)}
               </strong>
             </article>
             <article className="ledger-summary-card">
               <span>Invoices</span>
-              <strong>{Number(ledgerSummary.invoice_count || 0)}</strong>
+              <strong>{toFixedTwo(ledgerSummary.invoice_count || 0)}</strong>
             </article>
           </div>
         ) : (
@@ -421,11 +422,11 @@ export function DealerProfile() {
                   </div>
                   <p>
                     <strong>Amount:</strong> Rs.{" "}
-                    {Math.round(Number(row.amount || 0))}
+                    {toFixedTwo(row.amount || 0)}
                   </p>
                   <p>
                     <strong>Running Balance:</strong> Rs.{" "}
-                    {Math.round(Number(row.running_balance || 0))}
+                    {toFixedTwo(row.running_balance || 0)}
                   </p>
                   <p>
                     <strong>Date:</strong>{" "}

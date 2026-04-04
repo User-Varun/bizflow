@@ -2,13 +2,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { requestJSON } from "../styles/utils/requestJSON";
 import "../styles/dashboard.css";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
+import { formatCurrencyAmount, toFixedTwo } from "../lib/formatters";
 
 function formatCurrency(value) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(Number(value || 0));
+  return formatCurrencyAmount(value);
 }
 
 function KpiCard({ title, value, subtitle, tone = "neutral" }) {
@@ -91,7 +88,7 @@ export function Dashboard() {
         <div className="dashboard-grid">
           <KpiCard
             title="Total Invoices (Current Month)"
-            value={summary?.total_invoices_current_month ?? 0}
+            value={toFixedTwo(summary?.total_invoices_current_month ?? 0)}
             subtitle="All stock in and stock out invoices"
             tone="accent"
           />
@@ -126,8 +123,8 @@ export function Dashboard() {
 
           <KpiCard
             title="Low Stock Item Count"
-            value={summary?.low_stock_item_count ?? 0}
-            subtitle={`Items at or below ${summary?.low_stock_threshold ?? 10} units`}
+            value={toFixedTwo(summary?.low_stock_item_count ?? 0)}
+            subtitle={`Items at or below ${toFixedTwo(summary?.low_stock_threshold ?? 10)} units`}
             tone="danger"
           />
         </div>

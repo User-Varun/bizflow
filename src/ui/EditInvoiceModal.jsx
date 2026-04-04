@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import "../styles/editInvoiceModal.css";
+import { normalizeTaxPercent, toFixedTwo } from "../lib/formatters";
 
 function toNumber(value, fallback = 0) {
   const n = Number(value);
@@ -54,8 +55,8 @@ export function EditInvoiceModal({
           rate: toNumber(item.rate, 0),
           mrp: toNumber(item.mrp, 0),
           discount: toNumber(item.discount, 0),
-          cgst: toNumber(item.cgst, 0),
-          sgst: toNumber(item.sgst, 0),
+          cgst: normalizeTaxPercent(item.cgst, 2.5),
+          sgst: normalizeTaxPercent(item.sgst, 2.5),
         }))
       : [];
 
@@ -106,8 +107,8 @@ export function EditInvoiceModal({
         rate: toNumber(selected.rate ?? selected.mrp, 0),
         mrp: toNumber(selected.mrp, 0),
         discount: 0,
-        cgst: editableItems?.[0]?.cgst ?? 0,
-        sgst: editableItems?.[0]?.sgst ?? 0,
+        cgst: 2.5,
+        sgst: 2.5,
       },
     ]);
 
@@ -144,8 +145,8 @@ export function EditInvoiceModal({
       rate: toNumber(item.rate, 0),
       mrp: toNumber(item.mrp, 0),
       discount: toNumber(item.discount, 0),
-      cgst: toNumber(item.cgst, 0),
-      sgst: toNumber(item.sgst, 0),
+      cgst: normalizeTaxPercent(item.cgst, 2.5),
+      sgst: normalizeTaxPercent(item.sgst, 2.5),
     }));
 
     const payload = {
@@ -268,6 +269,8 @@ export function EditInvoiceModal({
                   <th>Qty</th>
                   <th>Rate</th>
                   <th>Disc %</th>
+                  <th>CGST %</th>
+                  <th>SGST %</th>
                   <th>Remove</th>
                 </tr>
               </thead>
@@ -284,10 +287,17 @@ export function EditInvoiceModal({
                       <input
                         type="number"
                         min="1"
-                        step="1"
+                        step="0.01"
                         value={item.product_qty}
                         onChange={(e) =>
                           updateItem(item.rowId, "product_qty", e.target.value)
+                        }
+                        onBlur={(e) =>
+                          updateItem(
+                            item.rowId,
+                            "product_qty",
+                            toFixedTwo(e.target.value, 1, { clampMin: 0 }),
+                          )
                         }
                       />
                     </td>
@@ -300,6 +310,13 @@ export function EditInvoiceModal({
                         onChange={(e) =>
                           updateItem(item.rowId, "rate", e.target.value)
                         }
+                        onBlur={(e) =>
+                          updateItem(
+                            item.rowId,
+                            "rate",
+                            toFixedTwo(e.target.value, 0, { clampMin: 0 }),
+                          )
+                        }
                       />
                     </td>
                     <td>
@@ -311,6 +328,60 @@ export function EditInvoiceModal({
                         value={item.discount}
                         onChange={(e) =>
                           updateItem(item.rowId, "discount", e.target.value)
+                        }
+                        onBlur={(e) =>
+                          updateItem(
+                            item.rowId,
+                            "discount",
+                            toFixedTwo(e.target.value, 0, {
+                              clampMin: 0,
+                              clampMax: 100,
+                            }),
+                          )
+                        }
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value={item.cgst}
+                        onChange={(e) =>
+                          updateItem(item.rowId, "cgst", e.target.value)
+                        }
+                        onBlur={(e) =>
+                          updateItem(
+                            item.rowId,
+                            "cgst",
+                            toFixedTwo(e.target.value, 2.5, {
+                              clampMin: 0,
+                              clampMax: 100,
+                            }),
+                          )
+                        }
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value={item.sgst}
+                        onChange={(e) =>
+                          updateItem(item.rowId, "sgst", e.target.value)
+                        }
+                        onBlur={(e) =>
+                          updateItem(
+                            item.rowId,
+                            "sgst",
+                            toFixedTwo(e.target.value, 2.5, {
+                              clampMin: 0,
+                              clampMax: 100,
+                            }),
+                          )
                         }
                       />
                     </td>
