@@ -278,7 +278,9 @@ export function Dealers() {
         </div>
       </div>
 
-      <section className="dealersCatalogContainer scroll-hide">
+      <section
+        className={`dealersCatalogContainer scroll-hide ${!dealersQuery.isLoading && dealers.length === 0 ? "dealersCatalogContainerEmpty" : ""}`}
+      >
         {dealersQuery.isLoading ? (
           <LoadingSpinner label="Loading dealers..." />
         ) : dealers.length > 0 ? (
@@ -312,7 +314,7 @@ export function Dealers() {
         ) : (
           <div className="dealersEmptyState">
             <svg viewBox="0 0 64 64" aria-hidden="true">
-              <path d="M12 16a6 6 0 0 1 6-6h28a6 6 0 0 1 6 6v32a6 6 0 0 1-6 6H18a6 6 0 0 1-6-6V16Zm6-2a2 2 0 0 0-2 2v32a2 2 0 0 0 2 2h28a2 2 0 0 0 2-2V16a2 2 0 0 0-2-2H18Zm6 7h16a2 2 0 1 1 0 4H24a2 2 0 1 1 0-4Zm0 10h16a2 2 0 1 1 0 4H24a2 2 0 1 1 0-4Zm0 10h10a2 2 0 1 1 0 4H24a2 2 0 1 1 0-4Z" />
+              <path d="M8 18a2 2 0 0 1 2-2h44a2 2 0 0 1 1.73 1l6 10.4a2 2 0 0 1 .27 1v18.6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V28.4a2 2 0 0 1 .27-1L8 17.98V18Zm1.85 2-4.7 8.13H58.9L54.2 20H9.85ZM4 30v16h56V30H4Zm16 4h4v8h-4v-8Zm8 0h4v8h-4v-8Zm8 0h4v8h-4v-8Z" />
             </svg>
             <h2>No dealers found</h2>
             <p>
