@@ -4,28 +4,59 @@ import { PaginationComp } from "../ui/PaginationComp";
 import "../styles/viewBills.css";
 import { InvoiceTemplate } from "../ui/InvoiceTemplate";
 import { EditInvoiceModal } from "../ui/EditInvoiceModal";
-import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { requestJSON } from "../styles/utils/requestJSON";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import "../index.css";
 
 export function ViewBills() {
   const baseUrl = import.meta.env.VITE_API_URL;
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [searchFilter, setSearchFilter] = useState("invoice_number");
   const [billTypeFilter, setBillTypeFilter] = useState("all");
-  const [dealerIdFilter, setDealerIdFilter] = useState("");
+  const [billStateFilter, setBillStateFilter] = useState("all");
   const [id, setId] = useState(null);
   const [editingInvoiceId, setEditingInvoiceId] = useState(null);
   const [editInvoiceError, setEditInvoiceError] = useState("");
   const [showInvoice, setShowInvoice] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(8);
-  const normalizedSearch = searchQuery.trim();
+  const debouncedSearch = useDebouncedValue(searchInput, 350);
+  const normalizedSearch = debouncedSearch.trim();
+
+  useEffect(() => {
+    const billTypeParam = String(searchParams.get("billType") || "all")
+      .trim()
+      .toLowerCase();
+    const billStateParam = String(searchParams.get("billState") || "all")
+      .trim()
+      .toLowerCase();
+
+    const nextBillType =
+      billTypeParam === "stock_in" || billTypeParam === "stock_out"
+        ? billTypeParam
+        : "all";
+
+    const nextBillState = [
+      "all",
+      "open",
+      "pending",
+      "partial",
+      "paid",
+    ].includes(billStateParam)
+      ? billStateParam
+      : "all";
+
+    setBillTypeFilter(nextBillType);
+    setBillStateFilter(nextBillState);
+    setPage(1);
+  }, [searchParams]);
 
   const { data, isLoading, isFetching, error } = useQuery({
     queryKey: [
@@ -36,12 +67,12 @@ export function ViewBills() {
         search: normalizedSearch,
         searchFilter,
         billTypeFilter,
-        dealerIdFilter,
+        billStateFilter,
       },
     ],
     queryFn: () =>
       requestJSON(
-        `${baseUrl}/viewInvoices?page=${page}&pageSize=${pageSize}&search=${encodeURIComponent(normalizedSearch)}&searchFilter=${encodeURIComponent(searchFilter)}&billType=${encodeURIComponent(billTypeFilter)}&dealerId=${encodeURIComponent(dealerIdFilter)}`,
+        `${baseUrl}/viewInvoices?page=${page}&pageSize=${pageSize}&search=${encodeURIComponent(normalizedSearch)}&searchFilter=${encodeURIComponent(searchFilter)}&billType=${encodeURIComponent(billTypeFilter)}&billState=${encodeURIComponent(billStateFilter)}`,
         {
           method: "GET",
         },
@@ -49,43 +80,6 @@ export function ViewBills() {
     staleTime: 30000,
     placeholderData: (previousData) => previousData,
   });
-
-  const dealerOptionsQuery = useQuery({
-    queryKey: ["viewBillsDealerOptions", billTypeFilter],
-    queryFn: async () => {
-      const fetchByType = async (type) => {
-        const response = await requestJSON(
-          `${baseUrl}/dealers?invoice_type=${encodeURIComponent(type)}&page=1&pageSize=100`,
-          { method: "GET" },
-        );
-
-        const rows = Array.isArray(response?.result) ? response.result : [];
-        return rows.map((dealer) => ({
-          id: dealer.id,
-          name: dealer.name,
-          phone: dealer.phone,
-          invoice_type: dealer.invoice_type || type,
-        }));
-      };
-
-      if (billTypeFilter === "all") {
-        const [outRows, inRows] = await Promise.all([
-          fetchByType("stock_out"),
-          fetchByType("stock_in"),
-        ]);
-
-        return [...outRows, ...inRows];
-      }
-
-      return fetchByType(billTypeFilter);
-    },
-    staleTime: 30000,
-    placeholderData: (previousData) => previousData,
-  });
-
-  const dealerOptions = Array.isArray(dealerOptionsQuery.data)
-    ? dealerOptionsQuery.data
-    : [];
 
   const bills = data?.result || [];
   const total = data?.total || 0;
@@ -211,7 +205,7 @@ export function ViewBills() {
   });
 
   function handleSearchChange(value) {
-    setSearchQuery(value);
+    setSearchInput(value);
     setPage(1);
   }
 
@@ -222,12 +216,6 @@ export function ViewBills() {
 
   function handleBillTypeFilterChange(value) {
     setBillTypeFilter(value);
-    setDealerIdFilter("");
-    setPage(1);
-  }
-
-  function handleDealerFilterChange(value) {
-    setDealerIdFilter(value);
     setPage(1);
   }
 
@@ -257,7 +245,7 @@ export function ViewBills() {
       {!showInvoice && (
         <div id="viewBillInnerHeader">
           <SearchBar
-            searchQuery={searchQuery}
+            searchQuery={searchInput}
             setSearchQuery={handleSearchChange}
             widthInPercent={85}
           />
@@ -268,8 +256,8 @@ export function ViewBills() {
             >
               <option value="invoice_number">By Invoice No</option>
               <option value="createdAt">By Date</option>
-              <option value="invoice_to">By Buyer Name</option>
-              <option value="invoice_from">By Seller Name</option>
+              <option value="invoice_to">By Customer</option>
+              <option value="invoice_from">By Supplier</option>
             </select>
           </div>
           <div className="viewBillFilter">
@@ -280,24 +268,6 @@ export function ViewBills() {
               <option value="all">All Bills</option>
               <option value="stock_in">Stock In</option>
               <option value="stock_out">Stock Out</option>
-            </select>
-          </div>
-          <div className="viewBillFilter">
-            <select
-              value={dealerIdFilter}
-              onChange={(e) => handleDealerFilterChange(e.target.value)}
-              disabled={dealerOptionsQuery.isLoading}
-            >
-              <option value="">
-                {dealerOptionsQuery.isLoading
-                  ? "Loading dealers..."
-                  : "All Dealers"}
-              </option>
-              {dealerOptions.map((dealer) => (
-                <option key={dealer.id} value={dealer.id}>
-                  {dealer.name} ({dealer.phone}) [{dealer.invoice_type}]
-                </option>
-              ))}
             </select>
           </div>
         </div>

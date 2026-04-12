@@ -4,7 +4,6 @@ export const SearchItemsContext = createContext();
 
 export const initalValue = {
   rate: {},
-  purchaseRatePercent: {},
   discount: {},
   cgst: {},
   sgst: {},
@@ -20,9 +19,9 @@ export function reducerFn(state, action) {
         ...state,
         quantities: {
           ...state.quantities,
-          [action.payload.id]: (
-            Number(state.quantities[action.payload.id] || 0) + 1
-          ).toFixed(2),
+          [action.payload.id]: String(
+            Number(state.quantities[action.payload.id] || 0) + 1,
+          ),
         },
       };
     case "DEC_QTY":
@@ -30,10 +29,9 @@ export function reducerFn(state, action) {
         ...state,
         quantities: {
           ...state.quantities,
-          [action.payload.id]: Math.max(
-            0,
-            Number(state.quantities[action.payload.id] || 0) - 1,
-          ).toFixed(2),
+          [action.payload.id]: String(
+            Math.max(0, Number(state.quantities[action.payload.id] || 0) - 1),
+          ),
         },
       };
 
@@ -51,8 +49,8 @@ export function reducerFn(state, action) {
 
       const parsedQty = Number(rawQty);
       const normalizedQty = Number.isFinite(parsedQty)
-        ? Math.max(0, parsedQty).toFixed(2)
-        : 0;
+        ? String(Math.max(0, parsedQty))
+        : "0";
 
       return {
         ...state,
@@ -68,15 +66,6 @@ export function reducerFn(state, action) {
         ...state,
         rate: {
           ...state.rate,
-          [action.payload.id]: action.payload.inputFieldValue,
-        },
-      };
-
-    case "SET_PURCHASE_RATE_PERCENT":
-      return {
-        ...state,
-        purchaseRatePercent: {
-          ...state.purchaseRatePercent,
           [action.payload.id]: action.payload.inputFieldValue,
         },
       };
@@ -119,7 +108,7 @@ export function reducerFn(state, action) {
         ...state,
         quantities: {
           ...state.quantities,
-          [action.payload.id]: "0.00",
+          [action.payload.id]: "0",
         },
       };
     case "RESET_RATE":
@@ -128,14 +117,6 @@ export function reducerFn(state, action) {
         rate: {
           ...state.rate,
           [action.payload.id]: "",
-        },
-      };
-    case "RESET_PURCHASE_RATE_PERCENT":
-      return {
-        ...state,
-        purchaseRatePercent: {
-          ...state.purchaseRatePercent,
-          [action.payload.id]: 0,
         },
       };
     case "RESET_DISCOUNT":

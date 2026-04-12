@@ -4,9 +4,10 @@ import { requestJSON } from "../styles/utils/requestJSON";
 import { LoadingSpinner } from "./LoadingSpinner";
 import {
   formatCurrencyAmount,
+  formatDateWithMonthWord,
   formatPercent,
   formatSignedCurrencyAmount,
-  toFixedTwo,
+  formatQuantity,
 } from "../lib/formatters";
 
 const baseUrl = import.meta.env.VITE_API_URL;
@@ -39,7 +40,7 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
   }
 
   function clacGrandTotal() {
-    return Number(data?.grand_total || 0);
+    return Math.round(Number(data?.grand_total || 0));
   }
 
   function calcRawGrandTotal() {
@@ -60,6 +61,17 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
     const roundOffFromApi = Number(data?.round_off);
     if (Number.isFinite(roundOffFromApi)) {
       return roundOffFromApi;
+    }
+
+    // Legacy invoices may not have round_off persisted. In that case,
+    // infer it from the stored grand total's nearest-integer rounding.
+    const grandTotalFromApi = Number(data?.grand_total);
+    if (Number.isFinite(grandTotalFromApi)) {
+      const inferredLegacyRoundOff =
+        Math.round(grandTotalFromApi) - grandTotalFromApi;
+      if (Math.abs(inferredLegacyRoundOff) >= 0.005) {
+        return Number(inferredLegacyRoundOff.toFixed(2));
+      }
     }
 
     const roundedTotal = clacGrandTotal();
@@ -184,33 +196,15 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
   }
 
   function formatDate(dateStr) {
-    const date = new Date(dateStr);
-    if (Number.isNaN(date.getTime())) return "-";
-
-    const day = String(date.getUTCDate()).padStart(2, "0");
-    const monthNames = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
-    const month = monthNames[date.getUTCMonth()] || "";
-    const year = date.getUTCFullYear();
-    const formatted = `${day}-${month}-${year}`;
-
-    return formatted;
+    return formatDateWithMonthWord(dateStr, "-");
   }
 
   const invoiceType = String(data?.invoice_type || "").toLowerCase();
   const isStockIn = invoiceType === "stock_in";
+  const displayInvoiceNumber =
+    isStockIn && String(data?.supplier_invoice_number || "").trim()
+      ? data.supplier_invoice_number
+      : data?.invoice_number;
   const companyGstin = String(data?.company_gstin || "").trim();
   const partyGstin = String(data?.other_party_gst || "").trim();
 
@@ -289,7 +283,7 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
                           <h1 className="inv-title">GST INVOICE</h1>
                         </div>
                         <div className="inv-right-inner container-pad-2">
-                          <span>Invoice No. : {data.invoice_number}</span>
+                          <span>Invoice No. : {displayInvoiceNumber}</span>
                           <span>Date : {formatDate(data.createdAt)}</span>
                         </div>
                       </section>
@@ -346,7 +340,7 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
                                   <td>
                                     {pageIndex * ITEMS_PER_PAGE + idx + 1}
                                   </td>
-                                  <td>{toFixedTwo(item.product_qty)}</td>
+                                  <td>{formatQuantity(item.product_qty)}</td>
                                   <td className="prod-col prod-name">
                                     {item.name}
                                   </td>

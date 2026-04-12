@@ -4,7 +4,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { requestJSON } from "../styles/utils/requestJSON";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { PaginationComp } from "../ui/PaginationComp";
-import { formatCurrencyAmount, toFixedTwo } from "../lib/formatters";
+import {
+  formatCurrencyAmount,
+  formatDateTimeWithMonthWord,
+  formatDateWithMonthWord,
+  toFixedTwo,
+} from "../lib/formatters";
 import "../styles/dealerProfile.css";
 
 const baseUrl = import.meta.env.VITE_API_URL;
@@ -22,6 +27,7 @@ export function DealerProfile() {
   });
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [showEditModal, setShowEditModal] = useState(false);
   const [historyPage, setHistoryPage] = useState(1);
   const [historyPageSize] = useState(6);
   const [historyBillState, setHistoryBillState] = useState("all");
@@ -56,6 +62,7 @@ export function DealerProfile() {
 
   const dealerType =
     dealerQuery.data?.result?.invoice_type || invoiceType || "stock_out";
+  const counterpartLabel = dealerType === "stock_in" ? "Supplier" : "Customer";
 
   const invoiceHistoryQuery = useQuery({
     queryKey: [
@@ -117,6 +124,7 @@ export function DealerProfile() {
     onSuccess: () => {
       setErrorMessage("");
       setSuccessMessage("Dealer updated successfully.");
+      setShowEditModal(false);
       queryClient.invalidateQueries({
         queryKey: ["dealer", invoiceType, dealerId],
       });
@@ -188,6 +196,127 @@ export function DealerProfile() {
 
   return (
     <section className="below-navbar-content-container dealer-profile-shell">
+      {showEditModal ? (
+        <div
+          className="dealer-profile-modal-overlay"
+          onClick={() => {
+            if (updateDealerMutation.isPending) return;
+            setShowEditModal(false);
+          }}
+        >
+          <div
+            className="dealer-profile-modal-content"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Edit dealer"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2>Edit Dealer</h2>
+            <form className="dealer-profile-form" onSubmit={handleSubmit}>
+              <div className="dealer-profile-grid">
+                <label>
+                  Name
+                  <input
+                    type="text"
+                    value={formState.name}
+                    onChange={(e) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        name: e.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </label>
+
+                <label>
+                  Phone
+                  <input
+                    type="text"
+                    value={formState.phone}
+                    onChange={(e) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        phone: e.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </label>
+
+                <label>
+                  GST
+                  <input
+                    type="text"
+                    value={formState.gst}
+                    onChange={(e) =>
+                      setFormState((prev) => ({ ...prev, gst: e.target.value }))
+                    }
+                  />
+                </label>
+
+                <label>
+                  Invoice Type
+                  <select
+                    value={formState.invoice_type}
+                    onChange={(e) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        invoice_type: e.target.value,
+                      }))
+                    }
+                  >
+                    <option value="stock_out">stock_out</option>
+                    <option value="stock_in">stock_in</option>
+                  </select>
+                </label>
+
+                <label className="dealer-profile-wide">
+                  Address
+                  <input
+                    type="text"
+                    value={formState.address}
+                    onChange={(e) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        address: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+              </div>
+
+              {errorMessage ? (
+                <p className="dealer-profile-error">{errorMessage}</p>
+              ) : null}
+              {successMessage ? (
+                <p className="dealer-profile-success">{successMessage}</p>
+              ) : null}
+
+              <div className="dealer-profile-modal-actions">
+                <button
+                  type="button"
+                  className="dealer-profile-modal-cancel"
+                  onClick={() => setShowEditModal(false)}
+                  disabled={updateDealerMutation.isPending}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="dealer-profile-save-btn"
+                  disabled={updateDealerMutation.isPending}
+                >
+                  {updateDealerMutation.isPending
+                    ? "Saving..."
+                    : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
       <div className="dealer-profile-header">
         <div>
           <h1>Dealer Profile</h1>
@@ -195,93 +324,52 @@ export function DealerProfile() {
             Type: <strong>{formState.invoice_type || invoiceType}</strong>
           </p>
         </div>
-        <Link to="/dealers" className="dealer-profile-back-link">
-          Back to Dealers
-        </Link>
+        <div className="dealer-profile-header-actions">
+          <button
+            type="button"
+            className="dealer-profile-edit-btn"
+            onClick={() => {
+              setErrorMessage("");
+              setSuccessMessage("");
+              setShowEditModal(true);
+            }}
+          >
+            Edit Dealer
+          </button>
+          <Link to="/dealers" className="dealer-profile-back-link">
+            Back to Dealers
+          </Link>
+        </div>
       </div>
 
-      <form className="dealer-profile-form" onSubmit={handleSubmit}>
+      <section className="dealer-profile-overview">
         <h2>Dealer Details</h2>
-
-        <div className="dealer-profile-grid">
-          <label>
-            Name
-            <input
-              type="text"
-              value={formState.name}
-              onChange={(e) =>
-                setFormState((prev) => ({ ...prev, name: e.target.value }))
-              }
-              required
-            />
-          </label>
-
-          <label>
-            Phone
-            <input
-              type="text"
-              value={formState.phone}
-              onChange={(e) =>
-                setFormState((prev) => ({ ...prev, phone: e.target.value }))
-              }
-              required
-            />
-          </label>
-
-          <label>
-            GST
-            <input
-              type="text"
-              value={formState.gst}
-              onChange={(e) =>
-                setFormState((prev) => ({ ...prev, gst: e.target.value }))
-              }
-            />
-          </label>
-
-          <label>
-            Invoice Type
-            <select
-              value={formState.invoice_type}
-              onChange={(e) =>
-                setFormState((prev) => ({
-                  ...prev,
-                  invoice_type: e.target.value,
-                }))
-              }
-            >
-              <option value="stock_out">stock_out</option>
-              <option value="stock_in">stock_in</option>
-            </select>
-          </label>
-
-          <label className="dealer-profile-wide">
-            Address
-            <input
-              type="text"
-              value={formState.address}
-              onChange={(e) =>
-                setFormState((prev) => ({ ...prev, address: e.target.value }))
-              }
-            />
-          </label>
+        <div className="dealer-profile-overview-grid">
+          <article>
+            <span>Name</span>
+            <strong>{formState.name || "-"}</strong>
+          </article>
+          <article>
+            <span>Phone</span>
+            <strong>{formState.phone || "-"}</strong>
+          </article>
+          <article>
+            <span>GST</span>
+            <strong>{formState.gst || "-"}</strong>
+          </article>
+          <article>
+            <span>Type</span>
+            <strong>{formState.invoice_type || "-"}</strong>
+          </article>
+          <article className="dealer-profile-overview-wide">
+            <span>Address</span>
+            <strong>{formState.address || "-"}</strong>
+          </article>
         </div>
-
-        {errorMessage ? (
-          <p className="dealer-profile-error">{errorMessage}</p>
-        ) : null}
         {successMessage ? (
           <p className="dealer-profile-success">{successMessage}</p>
         ) : null}
-
-        <button
-          type="submit"
-          className="dealer-profile-save-btn"
-          disabled={updateDealerMutation.isPending}
-        >
-          {updateDealerMutation.isPending ? "Saving..." : "Save Changes"}
-        </button>
-      </form>
+      </section>
 
       <section className="dealer-history-section">
         <div className="dealer-history-header">
@@ -318,29 +406,44 @@ export function DealerProfile() {
           <LoadingSpinner label="Loading dealer invoices..." />
         ) : invoices.length > 0 ? (
           <>
-            <div className="dealer-history-list">
-              {invoices.map((invoice) => (
-                <article key={invoice.id} className="dealer-history-card">
-                  <div className="dealer-history-row">
-                    <h3>{invoice.invoice_number}</h3>
-                    <span className={`dealer-bill-state ${invoice.bill_state}`}>
-                      {invoice.bill_state}
-                    </span>
-                  </div>
-                  <p>
-                    <strong>Date:</strong>{" "}
-                    {new Date(invoice.createdAt).toLocaleDateString("en-GB")}
-                  </p>
-                  <p>
-                    <strong>Total:</strong> Rs.{" "}
-                    {toFixedTwo(invoice.grand_total || 0)}
-                  </p>
-                  <p>
-                    <strong>Pending:</strong> Rs.{" "}
-                    {toFixedTwo(invoice.pending_amount || 0)}
-                  </p>
-                </article>
-              ))}
+            <div className="dealer-history-list-container scroll-hide">
+              <div className="dealer-history-list">
+                {invoices.map((invoice) => (
+                  <article key={invoice.id} className="dealer-history-card">
+                    <div className="dealer-history-row">
+                      <h3>
+                        {dealerType === "stock_in" &&
+                        String(invoice.supplier_invoice_number || "").trim()
+                          ? invoice.supplier_invoice_number
+                          : invoice.invoice_number}
+                      </h3>
+                      <span
+                        className={`dealer-bill-state ${invoice.bill_state}`}
+                      >
+                        {invoice.bill_state}
+                      </span>
+                    </div>
+                    <p>
+                      <strong>Date:</strong>{" "}
+                      {formatDateWithMonthWord(invoice.createdAt, "-")}
+                    </p>
+                    <p>
+                      <strong>{counterpartLabel}:</strong>{" "}
+                      {dealerType === "stock_in"
+                        ? invoice.invoice_to || "-"
+                        : invoice.invoice_from || "-"}
+                    </p>
+                    <p>
+                      <strong>Total:</strong> Rs.{" "}
+                      {toFixedTwo(invoice.grand_total || 0)}
+                    </p>
+                    <p>
+                      <strong>Pending:</strong> Rs.{" "}
+                      {toFixedTwo(invoice.pending_amount || 0)}
+                    </p>
+                  </article>
+                ))}
+              </div>
             </div>
 
             {historyTotal > historyPageSize ? (
@@ -409,35 +512,41 @@ export function DealerProfile() {
           <LoadingSpinner label="Loading ledger statement..." />
         ) : ledgerRows.length > 0 ? (
           <>
-            <div className="ledger-statement-list">
-              {ledgerRows.map((row) => (
-                <article key={row.row_id} className="ledger-statement-card">
-                  <div className="dealer-history-row">
-                    <h3>{row.invoice_number || "Invoice"}</h3>
-                    <span
-                      className={`dealer-bill-state ${row.row_type === "payment" ? "paid" : "partial"}`}
-                    >
-                      {row.row_type}
-                    </span>
-                  </div>
-                  <p>
-                    <strong>Amount:</strong> Rs. {toFixedTwo(row.amount || 0)}
-                  </p>
-                  <p>
-                    <strong>Running Balance:</strong> Rs.{" "}
-                    {toFixedTwo(row.running_balance || 0)}
-                  </p>
-                  <p>
-                    <strong>Date:</strong>{" "}
-                    {new Date(row.event_at).toLocaleString("en-GB")}
-                  </p>
-                  {row.payment_method ? (
+            <div className="ledger-statement-list-container scroll-hide">
+              <div className="ledger-statement-list">
+                {ledgerRows.map((row) => (
+                  <article key={row.row_id} className="ledger-statement-card">
+                    <div className="dealer-history-row">
+                      <h3>{row.invoice_number || "Invoice"}</h3>
+                      <span
+                        className={`dealer-bill-state ${row.row_type === "payment" ? "paid" : "partial"}`}
+                      >
+                        {row.row_type}
+                      </span>
+                    </div>
                     <p>
-                      <strong>Method:</strong> {row.payment_method}
+                      <strong>Amount:</strong> Rs. {toFixedTwo(row.amount || 0)}
                     </p>
-                  ) : null}
-                </article>
-              ))}
+                    <p>
+                      <strong>Running Balance:</strong> Rs.{" "}
+                      {toFixedTwo(row.running_balance || 0)}
+                    </p>
+                    <p>
+                      <strong>Date:</strong>{" "}
+                      {formatDateTimeWithMonthWord(row.event_at, "-")}
+                    </p>
+                    <p>
+                      <strong>{counterpartLabel}:</strong>{" "}
+                      {row.other_party_name || "-"}
+                    </p>
+                    {row.payment_method ? (
+                      <p>
+                        <strong>Method:</strong> {row.payment_method}
+                      </p>
+                    ) : null}
+                  </article>
+                ))}
+              </div>
             </div>
 
             {ledgerTotal > ledgerPageSize ? (

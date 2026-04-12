@@ -60,24 +60,19 @@ export function BillDetails({ setShowInvoice, setBillId }) {
   }, [state.invoice_items, billItemsPage]);
 
   const estimatedBillAmount = useMemo(() => {
-    return Number(
-      state.invoice_items
-        .reduce((acc, item) => {
-          const baseAmount =
-            Number(item.rate || 0) * Number(item.item_qty || 0);
-          const discountPercent = Math.max(
-            0,
-            Math.min(100, Number(item.discount || 0)),
-          );
-          const discountValue = (baseAmount * discountPercent) / 100;
-          const taxableAmount = Math.max(0, baseAmount - discountValue);
-          const cgstAmount = (taxableAmount * Number(item.cgst || 0)) / 100;
-          const sgstAmount = (taxableAmount * Number(item.sgst || 0)) / 100;
+    return state.invoice_items.reduce((acc, item) => {
+      const baseAmount = Number(item.rate || 0) * Number(item.item_qty || 0);
+      const discountPercent = Math.max(
+        0,
+        Math.min(100, Number(item.discount || 0)),
+      );
+      const discountValue = (baseAmount * discountPercent) / 100;
+      const taxableAmount = Math.max(0, baseAmount - discountValue);
+      const cgstAmount = (taxableAmount * Number(item.cgst || 0)) / 100;
+      const sgstAmount = (taxableAmount * Number(item.sgst || 0)) / 100;
 
-          return acc + taxableAmount + cgstAmount + sgstAmount;
-        }, 0)
-        .toFixed(2),
-    );
+      return acc + taxableAmount + cgstAmount + sgstAmount;
+    }, 0);
   }, [state.invoice_items]);
 
   const roundedEstimatedBillAmount = useMemo(
@@ -256,6 +251,13 @@ export function BillDetails({ setShowInvoice, setBillId }) {
       return;
     }
 
+    if (state.invoice_type === STOCK_IN && !String(state.invoice_no).trim()) {
+      setErrorModalMessage(
+        "Please enter supplier invoice number for stock_in bill.",
+      );
+      return;
+    }
+
     if (state.invoice_type === STOCK_IN) {
       const missingCatalogItem = state.invoice_items.find((item) => {
         const catalogId = String(
@@ -279,7 +281,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
       return;
     }
 
-    if (amount > estimatedBillAmount) {
+    if (amount > roundedEstimatedBillAmount) {
       setErrorModalMessage(
         "Deposited amount cannot be greater than bill amount.",
       );
@@ -310,6 +312,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
         : {
             invoice_type: STOCK_IN,
             dealer_id: state.dealer_id,
+            supplier_invoice_number: String(state.invoice_no || "").trim(),
             invoice_from: state.invoice_from,
             address_from: state.address_from,
             phone_from: state.phone_from,
@@ -530,6 +533,25 @@ export function BillDetails({ setShowInvoice, setBillId }) {
               ))}
             </select>
           </div>
+
+          {state.invoice_type === STOCK_IN ? (
+            <div className="form-el-container">
+              <span>Supplier Invoice No</span>
+              <input
+                className="formEl"
+                type="text"
+                required
+                value={state.invoice_no || ""}
+                onChange={(e) =>
+                  dispatch({
+                    type: "SET_FIELDS",
+                    payload: { invoice_no: e.target.value },
+                  })
+                }
+                placeholder="Enter supplier invoice number"
+              />
+            </div>
+          ) : null}
         </div>
 
         {dealersQuery.isLoading ? null : dealers.length === 0 ? (

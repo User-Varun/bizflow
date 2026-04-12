@@ -8,6 +8,7 @@ import { BillCardItem } from "../../ui/BillCardItem";
 import { LoadingSpinner } from "../../ui/LoadingSpinner";
 import { requestJSON } from "../../styles/utils/requestJSON";
 import { useBill } from "./hooks/useBill";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 
 const baseUrl = import.meta.env.VITE_API_URL;
 
@@ -15,8 +16,9 @@ export function SearchItems() {
   const { state } = useBill();
 
   // Load defaults on mount/invoice_type change
-  const [searchQuery, setSearchQuery] = useState("");
-  const normalizedSearch = searchQuery.trim();
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedSearch = useDebouncedValue(searchInput, 350);
+  const normalizedSearch = debouncedSearch.trim();
   const isStockIn = state.invoice_type === "stock_in";
   const sourcePath = isStockIn ? "productCatalog" : "inventory";
   const selectedDealerId = String(state.dealer_id || "").trim();
@@ -54,6 +56,7 @@ export function SearchItems() {
       return items;
     },
     staleTime: 30000,
+    placeholderData: (previousData) => previousData,
   });
 
   if (isLoading) {
@@ -70,7 +73,7 @@ export function SearchItems() {
 
   return (
     <section id="searchFeatureContainer">
-      <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+      <SearchBar searchQuery={searchInput} setSearchQuery={setSearchInput} />
       <div id="searchItemsContainer" className="scroll-hide">
         {isStockIn && !selectedDealerId ? (
           <h1>Select a supplier dealer to load products.</h1>

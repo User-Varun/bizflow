@@ -1,8 +1,9 @@
 import "../styles/productCard.css";
 import {
   formatCurrencyAmount,
+  formatDateWithMonthWord,
+  formatQuantity,
   formatPercent,
-  toFixedTwo,
 } from "../lib/formatters";
 
 export function ProductCard({
@@ -10,6 +11,7 @@ export function ProductCard({
   prodCat = null,
   billDetailsCard = null,
   compact = false,
+  inventoryInsights = false,
   onRemove = null,
   onEdit = null,
   onDelete = null,
@@ -22,10 +24,14 @@ export function ProductCard({
 
   const stockQty = Number(res?.product_qty ?? res?.item_qty ?? 0);
   const unitLabel =
-    `${toFixedTwo(res?.unit_qty ?? 0)} ${res?.unit_name ?? ""}`.trim();
+    `${formatQuantity(res?.unit_qty ?? 0)} ${res?.unit_name ?? ""}`.trim();
   const hsnLabel = `HSN: ${res?.hsn_code ?? ""}`;
   const dealerLabel = res?.dealer?.name ? `Dealer: ${res.dealer.name}` : "";
   const showInventoryTopQty = compact && !prodCat && !billDetailsCard;
+  const updatedLabel = res?.updatedAt
+    ? `Updated: ${formatDateWithMonthWord(res.updatedAt, "")}`
+    : "";
+  const compactNameMax = prodCat ? 100 : inventoryInsights ? 70 : 34;
 
   return (
     <div
@@ -49,8 +55,17 @@ export function ProductCard({
         <div className="card-content compact-card-content">
           <div className="product-compact-top-row">
             <div className="product-compact-name-wrap">
-              <h3 className="product-compact-name" title={res.name || ""}>
-                {truncate(res.name, 34)}
+              <h3
+                className={[
+                  "product-compact-name",
+                  prodCat && "catalog-compact-name",
+                  inventoryInsights && "inventory-compact-name",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                title={res.name || ""}
+              >
+                {truncate(res.name, compactNameMax)}
               </h3>
               <p className="product-compact-brand" title={res.brand || ""}>
                 {truncate(res.brand, 26)}
@@ -62,7 +77,7 @@ export function ProductCard({
               </span>
               {showInventoryTopQty ? (
                 <span className="product-compact-chip qty-highlight stock-highlight compact-top-qty">
-                  Qty: {toFixedTwo(stockQty)}
+                  Qty: {formatQuantity(stockQty)}
                 </span>
               ) : null}
             </div>
@@ -77,13 +92,13 @@ export function ProductCard({
             </span>
             {billDetailsCard ? (
               <span className="product-compact-chip qty-highlight">
-                Qty: {toFixedTwo(res?.item_qty || 0)}
+                Qty: {formatQuantity(res?.item_qty || 0)}
               </span>
             ) : (
               !prodCat &&
               !showInventoryTopQty && (
                 <span className="product-compact-chip qty-highlight stock-highlight">
-                  Qty: {toFixedTwo(stockQty)}
+                  Qty: {formatQuantity(stockQty)}
                 </span>
               )
             )}
@@ -116,6 +131,19 @@ export function ProductCard({
             >
               {truncate(hsnLabel, 16)}
             </span>
+            {inventoryInsights && stockQty <= 0 ? (
+              <span className="product-compact-chip inventory-out-stock-chip">
+                Out of Stock
+              </span>
+            ) : null}
+            {inventoryInsights && updatedLabel ? (
+              <span
+                className="product-compact-chip inventory-updated-chip"
+                title={updatedLabel}
+              >
+                {updatedLabel}
+              </span>
+            ) : null}
           </div>
 
           {billDetailsCard && onRemove && (
@@ -171,7 +199,7 @@ export function ProductCard({
             <div className="detail-item">
               <label>Pack Size</label>
               <p className="detail-value">
-                {toFixedTwo(res.unit_qty)} {res.unit_name}
+                {formatQuantity(res.unit_qty)} {res.unit_name}
               </p>
             </div>
           </div>
@@ -179,7 +207,7 @@ export function ProductCard({
           {!prodCat && (
             <div className="detail-item full-width">
               <label>Quantity in Stock</label>
-              <p className="detail-value">{toFixedTwo(stockQty)}</p>
+              <p className="detail-value">{formatQuantity(stockQty)}</p>
             </div>
           )}
           <div className="detail-item full-width">

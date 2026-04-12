@@ -7,6 +7,7 @@ import { ProductCard } from "../ui/ProductCard";
 import { PaginationComp } from "../ui/PaginationComp";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { requestJSON } from "../styles/utils/requestJSON";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const DEFAULT_UNIT_OPTIONS = ["pcs", "box", "jar"];
@@ -14,11 +15,17 @@ const CUSTOM_UNIT_OPTION = "__custom_unit__";
 const baseUrl = import.meta.env.VITE_API_URL;
 const SUPPLIER_TYPE = "stock_in";
 
+function normalizeCustomUnitName(value) {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) return "";
+  return `${trimmed.charAt(0).toUpperCase()}${trimmed.slice(1).toLowerCase()}`;
+}
+
 export function ProductCatalog() {
   const queryClient = useQueryClient();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [errMsg, setErrMsg] = useState("");
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingProductId, setEditingProductId] = useState(null);
@@ -36,9 +43,10 @@ export function ProductCatalog() {
   const [unitQty, setUnitQty] = useState("");
 
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 8;
 
-  const normalizedSearch = searchQuery.trim();
+  const debouncedSearch = useDebouncedValue(searchInput, 350);
+  const normalizedSearch = debouncedSearch.trim();
   const isCustomUnitSelected = unitName === CUSTOM_UNIT_OPTION;
 
   const unitOptions =
@@ -148,8 +156,8 @@ export function ProductCatalog() {
     setFormDealerId(activeDealerId || "");
     setName("");
     setBrand("");
-    setMrp(0);
-    setRate(0);
+    setMrp("");
+    setRate("");
     setHsnCode("");
     setUnitName("pcs");
     setCustomUnitName("");
@@ -180,15 +188,15 @@ export function ProductCatalog() {
     setFormDealerId(product.dealer_id || product?.dealer?.id || activeDealerId);
     setName(product.name);
     setBrand(product.brand);
-    setMrp(product.mrp);
-    setRate(product.rate ?? 0);
+    setMrp(product.mrp ?? "");
+    setRate(product.rate ?? "");
     setHsnCode(product.hsn_code);
     if (DEFAULT_UNIT_OPTIONS.includes(product.unit_name)) {
       setUnitName(product.unit_name);
       setCustomUnitName("");
     } else {
       setUnitName(CUSTOM_UNIT_OPTION);
-      setCustomUnitName(product.unit_name || "");
+      setCustomUnitName(normalizeCustomUnitName(product.unit_name || ""));
     }
     setUnitQty(product.unit_qty);
     setIsOpen(true);
@@ -215,7 +223,7 @@ export function ProductCatalog() {
   }
 
   function handleSearchChange(value) {
-    setSearchQuery(value);
+    setSearchInput(value);
     setPage(1);
   }
 
@@ -231,23 +239,33 @@ export function ProductCatalog() {
     e.preventDefault();
     setErrMsg("");
 
-    const resolvedUnitName = String(
-      isCustomUnitSelected ? customUnitName : unitName,
-    )
-      .trim()
-      .toLowerCase();
+    const resolvedUnitName = isCustomUnitSelected
+      ? normalizeCustomUnitName(customUnitName)
+      : String(unitName || "")
+          .trim()
+          .toLowerCase();
+
+    if (isCustomUnitSelected) {
+      setCustomUnitName(resolvedUnitName);
+    }
 
     if (
       !formDealerId ||
       !name ||
       !brand ||
       rate === "" ||
-      !mrp ||
+      mrp === "" ||
       !hsnCode ||
       !resolvedUnitName ||
       !unitQty
     ) {
       setErrMsg("Please fill all fields before submitting.");
+      return;
+    }
+
+    const parsedMrp = Number(mrp);
+    if (!Number.isFinite(parsedMrp) || parsedMrp < 0) {
+      setErrMsg("MRP must be a valid non-negative number.");
       return;
     }
 
@@ -266,7 +284,7 @@ export function ProductCatalog() {
       dealer_id: formDealerId,
       name: name.trim(),
       brand: brand.trim(),
-      mrp: Number(mrp),
+      mrp: parsedMrp,
       rate: parsedRate,
       hsn_code: String(hsnCode).trim(),
       unit_name: resolvedUnitName,
@@ -307,104 +325,134 @@ export function ProductCatalog() {
               {isEditMode ? "Edit Product" : "Add Product"}
             </h1>
             <form className="container-addProd" onSubmit={handleSubmit}>
-              <select
-                value={formDealerId}
-                onChange={(e) => setFormDealerId(e.target.value)}
-                required
-              >
-                <option value="" disabled>
-                  Select supplier dealer
-                </option>
-                {suppliers.map((dealer) => (
-                  <option value={dealer.id} key={dealer.id}>
-                    {dealer.name} ({dealer.phone})
+              <label className="add-product-form-field">
+                <span className="add-product-form-label">Supplier Dealer</span>
+                <select
+                  value={formDealerId}
+                  onChange={(e) => setFormDealerId(e.target.value)}
+                  required
+                >
+                  <option value="" disabled>
+                    Select supplier dealer
                   </option>
-                ))}
-              </select>
+                  {suppliers.map((dealer) => (
+                    <option value={dealer.id} key={dealer.id}>
+                      {dealer.name} ({dealer.phone})
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="product name"
-                required
-              />
-              <input
-                type="text"
-                value={brand}
-                onChange={(e) => setBrand(e.target.value)}
-                placeholder="product brand"
-                required
-              />
-              <input
-                type="number"
-                value={mrp}
-                min="0"
-                onChange={(e) => {
-                  setMrp(e.target.value);
-                }}
-                placeholder="product MRP"
-                required
-              />
-              <input
-                type="number"
-                value={rate}
-                min="0"
-                step="0.01"
-                onChange={(e) => {
-                  setRate(e.target.value);
-                }}
-                placeholder="purchase/base rate"
-                required
-              />
-              <input
-                type="number"
-                value={hsnCode}
-                min="0"
-                onChange={(e) => {
-                  setHsnCode(e.target.value);
-                }}
-                placeholder="HSN Code"
-                required
-              />
-              <select
-                value={unitName}
-                onChange={(e) => {
-                  const selected = e.target.value;
-                  setUnitName(selected);
-                  if (selected !== CUSTOM_UNIT_OPTION) {
-                    setCustomUnitName("");
-                  }
-                }}
-                required
-              >
-                {unitOptions.map((option) => (
-                  <option value={option} key={option}>
-                    {option}
-                  </option>
-                ))}
-                <option value={CUSTOM_UNIT_OPTION}>+ Add custom unit</option>
-              </select>
-              {isCustomUnitSelected ? (
+              <label className="add-product-form-field">
+                <span className="add-product-form-label">Product Name</span>
                 <input
                   type="text"
-                  value={customUnitName}
-                  onChange={(e) => setCustomUnitName(e.target.value)}
-                  placeholder="Enter custom unit name (e.g. strip, packet)"
-                  maxLength={50}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter product name"
                   required
                 />
+              </label>
+              <label className="add-product-form-field">
+                <span className="add-product-form-label">Brand</span>
+                <input
+                  type="text"
+                  value={brand}
+                  onChange={(e) => setBrand(e.target.value)}
+                  placeholder="Enter product brand"
+                  required
+                />
+              </label>
+              <label className="add-product-form-field">
+                <span className="add-product-form-label">MRP</span>
+                <input
+                  type="number"
+                  value={mrp}
+                  min="0"
+                  onChange={(e) => {
+                    setMrp(e.target.value);
+                  }}
+                  placeholder="Enter MRP"
+                  required
+                />
+              </label>
+              <label className="add-product-form-field">
+                <span className="add-product-form-label">Base Rate</span>
+                <input
+                  type="number"
+                  value={rate}
+                  min="0"
+                  step="any"
+                  onChange={(e) => {
+                    setRate(e.target.value);
+                  }}
+                  placeholder="Enter base rate"
+                  required
+                />
+              </label>
+              <label className="add-product-form-field">
+                <span className="add-product-form-label">HSN Code</span>
+                <input
+                  type="number"
+                  value={hsnCode}
+                  min="0"
+                  onChange={(e) => {
+                    setHsnCode(e.target.value);
+                  }}
+                  placeholder="Enter HSN code"
+                  required
+                />
+              </label>
+              <label className="add-product-form-field">
+                <span className="add-product-form-label">Unit</span>
+                <select
+                  value={unitName}
+                  onChange={(e) => {
+                    const selected = e.target.value;
+                    setUnitName(selected);
+                    if (selected !== CUSTOM_UNIT_OPTION) {
+                      setCustomUnitName("");
+                    }
+                  }}
+                  required
+                >
+                  {unitOptions.map((option) => (
+                    <option value={option} key={option}>
+                      {option}
+                    </option>
+                  ))}
+                  <option value={CUSTOM_UNIT_OPTION}>+ Add custom unit</option>
+                </select>
+              </label>
+              {isCustomUnitSelected ? (
+                <label className="add-product-form-field">
+                  <span className="add-product-form-label">Custom Unit</span>
+                  <input
+                    type="text"
+                    value={customUnitName}
+                    onChange={(e) => setCustomUnitName(e.target.value)}
+                    onBlur={(e) =>
+                      setCustomUnitName(normalizeCustomUnitName(e.target.value))
+                    }
+                    placeholder="Enter custom unit name (e.g. strip, packet)"
+                    maxLength={50}
+                    required
+                  />
+                </label>
               ) : null}
-              <input
-                type="number"
-                value={unitQty}
-                min="0"
-                onChange={(e) => {
-                  setUnitQty(e.target.value);
-                }}
-                placeholder="Unit Quantity (say 5 )"
-                required
-              />
+              <label className="add-product-form-field">
+                <span className="add-product-form-label">Unit Quantity</span>
+                <input
+                  type="number"
+                  value={unitQty}
+                  min="0"
+                  onChange={(e) => {
+                    setUnitQty(e.target.value);
+                  }}
+                  placeholder="Enter unit quantity"
+                  required
+                />
+              </label>
 
               <button
                 type="submit"
@@ -490,7 +538,7 @@ export function ProductCatalog() {
       <div id="innerHeader">
         <SearchBar
           widthInPercent={70}
-          searchQuery={searchQuery}
+          searchQuery={searchInput}
           setSearchQuery={handleSearchChange}
         />
 

@@ -21,6 +21,7 @@ export function EditInvoiceModal({
   const [partyAddress, setPartyAddress] = useState("");
   const [partyPhone, setPartyPhone] = useState("");
   const [partyGst, setPartyGst] = useState("");
+  const [supplierInvoiceNumber, setSupplierInvoiceNumber] = useState("");
   const [editableItems, setEditableItems] = useState([]);
   const [selectedAddId, setSelectedAddId] = useState("");
   const [localError, setLocalError] = useState("");
@@ -41,6 +42,7 @@ export function EditInvoiceModal({
     }
 
     setPartyGst(String(invoiceData.other_party_gst || ""));
+    setSupplierInvoiceNumber(String(invoiceData.supplier_invoice_number || ""));
 
     const mappedItems = Array.isArray(invoiceData.invoice_items)
       ? invoiceData.invoice_items.map((item, index) => ({
@@ -162,6 +164,7 @@ export function EditInvoiceModal({
             address_from: partyAddress,
             phone_from: partyPhone,
             other_party_gst: partyGst,
+            supplier_invoice_number: String(supplierInvoiceNumber || "").trim(),
           },
       invoiceItemsDetails: normalizedItems,
     };
@@ -190,9 +193,7 @@ export function EditInvoiceModal({
         </div>
 
         <div className="edit-invoice-lock-info">
-          <span>
-            Locked: Invoice No, Bill Type, Created Date, Payment History
-          </span>
+          <span>Locked: Bill Type, Created Date, Payment History</span>
           <p>
             #{invoiceData?.invoice_number || "-"} |{" "}
             {invoiceData?.invoice_type || "-"}
@@ -201,6 +202,18 @@ export function EditInvoiceModal({
 
         <form className="edit-invoice-form" onSubmit={handleSubmit}>
           <div className="edit-invoice-party-grid">
+            {!isStockOut ? (
+              <label>
+                Supplier Invoice No
+                <input
+                  type="text"
+                  value={supplierInvoiceNumber}
+                  onChange={(e) => setSupplierInvoiceNumber(e.target.value)}
+                  placeholder="NO"
+                />
+              </label>
+            ) : null}
+
             <label>
               Party Name
               <input
@@ -287,7 +300,7 @@ export function EditInvoiceModal({
                       <input
                         type="number"
                         min="1"
-                        step="0.01"
+                        step="any"
                         value={item.product_qty}
                         onChange={(e) =>
                           updateItem(item.rowId, "product_qty", e.target.value)
@@ -296,7 +309,7 @@ export function EditInvoiceModal({
                           updateItem(
                             item.rowId,
                             "product_qty",
-                            toFixedTwo(e.target.value, 1, { clampMin: 0 }),
+                            String(Math.max(0, Number(e.target.value) || 0)),
                           )
                         }
                       />
