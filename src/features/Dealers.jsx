@@ -261,20 +261,6 @@ export function Dealers() {
           >
             + Add Dealer
           </button>
-
-          {total > pageSize ? (
-            <PaginationComp
-              className="dealersHeaderPagination"
-              page={page}
-              pageSize={pageSize}
-              total={total}
-              onChange={setPage}
-              disabled={dealersQuery.isFetching}
-              showFirstLast={true}
-              siblingCount={1}
-              ariaLabel="Dealers pagination"
-            />
-          ) : null}
         </div>
       </div>
 
@@ -332,6 +318,20 @@ export function Dealers() {
           </div>
         )}
       </section>
+
+      {dealers.length > 0 && total > pageSize ? (
+        <PaginationComp
+          className="dealersHeaderPagination"
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          onChange={setPage}
+          disabled={dealersQuery.isFetching}
+          showFirstLast={true}
+          siblingCount={1}
+          ariaLabel="Dealers pagination"
+        />
+      ) : null}
     </section>
   );
 }
