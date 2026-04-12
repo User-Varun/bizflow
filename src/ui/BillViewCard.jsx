@@ -1,6 +1,10 @@
 import "../styles/billViewCard.css";
 import { useEffect, useState } from "react";
-import { formatCurrencyAmount, toFixedTwo } from "../lib/formatters";
+import {
+  formatCurrencyAmount,
+  formatDateWithMonthWord,
+  toFixedTwo,
+} from "../lib/formatters";
 
 export function BillViewCard({
   res,
@@ -45,33 +49,19 @@ export function BillViewCard({
     return str.length > max ? `${str.slice(0, max).trimEnd()}...` : str;
   };
 
-  // Format createdAt as DD-MM-YYYY using UTC to avoid timezone shifts
-  const formattedDate = (() => {
-    if (!localCreatedAt) return "";
-    const d = new Date(localCreatedAt);
-    if (Number.isNaN(d.getTime())) return "";
-    const day = String(d.getUTCDate()).padStart(2, "0");
-    const monthNames = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
-    const month = monthNames[d.getUTCMonth()] || "";
-    const year = d.getUTCFullYear();
-    return `${day}-${month}-${year}`;
-  })();
+  const formattedDate = localCreatedAt
+    ? formatDateWithMonthWord(localCreatedAt, "")
+    : "";
 
   const pendingAmount = Number(res?.pending_amount || 0);
   const isPaid = String(res?.bill_state || "") === "paid" || pendingAmount <= 0;
+  const isStockIn = String(res?.invoice_type || "") === "stock_in";
+  const supplierInvoiceNumber = String(
+    res?.supplier_invoice_number || "",
+  ).trim();
+  const displayInvoiceNumber = isStockIn
+    ? supplierInvoiceNumber || "NO"
+    : res?.invoice_number;
 
   async function handlePay() {
     setError("");
@@ -123,7 +113,7 @@ export function BillViewCard({
       <div className="billCardList">
         <div className="billCardField">
           <p className="billCardLabel">Invoice No</p>
-          <p className="billCardValue">{res.invoice_number || "-"}</p>
+          <p className="billCardValue">{displayInvoiceNumber || "-"}</p>
         </div>
 
         <div className="billCardField">

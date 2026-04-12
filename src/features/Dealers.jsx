@@ -5,6 +5,7 @@ import { requestJSON } from "../styles/utils/requestJSON";
 import { PaginationComp } from "../ui/PaginationComp";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { SearchBar } from "../ui/SearchBar";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import "../styles/dealers.css";
 
 const baseUrl = import.meta.env.VITE_API_URL;
@@ -27,14 +28,15 @@ export function Dealers() {
   const queryClient = useQueryClient();
 
   const [activeType, setActiveType] = useState("stock_out");
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize] = useState(8);
   const [showAddForm, setShowAddForm] = useState(false);
   const [formState, setFormState] = useState(INITIAL_FORM);
   const [formError, setFormError] = useState("");
 
-  const normalizedSearch = search.trim();
+  const debouncedSearch = useDebouncedValue(searchInput, 350);
+  const normalizedSearch = debouncedSearch.trim();
 
   const dealersQuery = useQuery({
     queryKey: ["dealers", activeType, page, pageSize, normalizedSearch],
@@ -75,7 +77,7 @@ export function Dealers() {
     const { closeForm = true } = options;
     setActiveType(nextType);
     setPage(1);
-    setSearch("");
+    setSearchInput("");
     if (closeForm) {
       setShowAddForm(false);
     }
@@ -225,9 +227,9 @@ export function Dealers() {
       <div id="dealersInnerHeader">
         <SearchBar
           widthInPercent={70}
-          searchQuery={search}
+          searchQuery={searchInput}
           setSearchQuery={(value) => {
-            setSearch(value);
+            setSearchInput(value);
             setPage(1);
           }}
           placeholder="Search Dealers"
@@ -295,6 +297,8 @@ export function Dealers() {
                   <p title={dealer.address || ""}>{dealer.address || "-"}</p>
                 </div>
               </div>
+
+              <div className="dealerCardHint">Open details -></div>
             </button>
           ))
         ) : (

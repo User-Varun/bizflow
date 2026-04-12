@@ -299,6 +299,15 @@
   min-height: calc(1.2em * 2);
 }
 
+.catalog-compact-name,
+.inventory-compact-name {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: initial;
+  min-height: 0;
+}
+
 .product-compact-brand {
   margin: 0;
   font-size: 0.83rem;
@@ -364,6 +373,27 @@
   min-width: 0;
 }
 
+.inventory-updated-chip {
+  width: 100%;
+  max-width: none;
+  grid-column: 1 / -1;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.inventory-out-stock-chip {
+  width: 100%;
+  max-width: none;
+  grid-column: 1 / -1;
+  color: #ffffff;
+  background: #dc2626;
+  border-color: #b91c1c;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 0.2px;
+}
+
 .trunc-chip {
   flex: 1 1 0;
 }
@@ -392,6 +422,28 @@
   box-shadow: 0 5px 12px rgba(37, 99, 235, 0.32);
   font-weight: 800;
   letter-spacing: 0.2px;
+}
+
+.stock-status-chip {
+  font-weight: 800;
+}
+
+.stock-status-chip.healthy-stock {
+  color: #14532d;
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+.stock-status-chip.low-stock {
+  color: #92400e;
+  background: #ffedd5;
+  border-color: #fdba74;
+}
+
+.stock-status-chip.out-stock {
+  color: #991b1b;
+  background: #fee2e2;
+  border-color: #fca5a5;
 }
 
 .compact-card-actions {

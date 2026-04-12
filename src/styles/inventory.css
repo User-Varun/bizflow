@@ -15,7 +15,7 @@ body {
   padding: 1.15rem;
   border-radius: 0.4rem;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(236px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   grid-auto-rows: minmax(0, auto);
   gap: 1.15rem;
   flex: 1 1 auto;
@@ -115,6 +115,38 @@ body {
   gap: 1rem;
 }
 
+.inventoryDealerFilter {
+  border: 1px solid #d8d3cd;
+  border-radius: 0.6rem;
+  background-color: #f3efea;
+  color: #2f2a26;
+  padding: 0.78rem 0.9rem;
+  font-weight: 700;
+  min-width: 220px;
+}
+
+.inventoryStockFilter {
+  border: 1px solid #d8d3cd;
+  border-radius: 0.6rem;
+  background-color: #f3efea;
+  color: #2f2a26;
+  padding: 0.78rem 0.9rem;
+  font-weight: 700;
+  min-width: 200px;
+}
+
+@media (max-width: 1320px) {
+  #inventoryContainer {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1080px) {
+  #inventoryContainer {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 900px) {
   .inventoryShell {
     height: calc(100dvh - 10vh - 0.9rem);
@@ -126,5 +158,24 @@ body {
 
   .inventory-empty {
     min-height: 0;
+  }
+
+  #innerHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .inventoryDealerFilter {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .inventoryStockFilter {
+    width: 100%;
+    min-width: 0;
+  }
+
+  #inventoryContainer {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
