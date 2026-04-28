@@ -357,6 +357,37 @@ body {
   padding-bottom: 0.5rem;
 }
 
+.invoice-print-options {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 0.6rem;
+  background: #eef1f6;
+}
+
+.invoice-print-label {
+  font-weight: 700;
+  color: #2e3747;
+  font-size: 0.9rem;
+}
+
+.invoice-print-option {
+  border: 1px solid #8c97aa;
+  background: #ffffff;
+  color: #2e3747;
+  font-weight: 700;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.invoice-print-option.is-active {
+  background: #20283a;
+  color: #ffffff;
+  border-color: #20283a;
+}
+
 .invoice-action-btn {
   border: none;
   border-radius: 0.5rem;
@@ -401,7 +432,7 @@ body {
 
 @media print {
   @page {
-    size: A4 portrait;
+    size: auto;
     margin: 1mm;
   }
 

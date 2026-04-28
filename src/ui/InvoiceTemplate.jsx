@@ -1,5 +1,6 @@
 import "../styles/invoiceTemplate.css";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { requestJSON } from "../styles/utils/requestJSON";
 import { LoadingSpinner } from "./LoadingSpinner";
 import {
@@ -14,6 +15,7 @@ const baseUrl = import.meta.env.VITE_API_URL;
 const ITEMS_PER_PAGE = 6;
 
 export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
+  const [printPaper, setPrintPaper] = useState("A5");
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["invoice", id],
     queryFn: () =>
@@ -228,10 +230,17 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
       : [[]];
 
   const totalPages = itemPages.length;
+  const pagesPerSheet = 1;
   const sheetPages = Array.from(
-    { length: Math.ceil(totalPages / 2) },
-    (_, sheetIndex) => itemPages.slice(sheetIndex * 2, sheetIndex * 2 + 2),
+    { length: Math.ceil(totalPages / pagesPerSheet) },
+    (_, sheetIndex) =>
+      itemPages.slice(
+        sheetIndex * pagesPerSheet,
+        sheetIndex * pagesPerSheet + pagesPerSheet,
+      ),
   );
+
+  const pageSizeRule = printPaper === "A4" ? "A4 landscape" : "A5 landscape";
 
   if (isLoading) {
     return <LoadingSpinner label="Loading invoice..." minHeight="300px" />;
@@ -242,11 +251,12 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
 
   return data ? (
     <div className="invoice-template-container">
+      <style>{`@media print { @page { size: ${pageSizeRule}; margin: 1mm; } }`}</style>
       <div id="invoice-root" className="invoice-pages-stack">
         {sheetPages.map((sheet, sheetIndex) => (
           <div className="invoice-print-sheet" key={`sheet-${sheetIndex + 1}`}>
             {sheet.map((pageItems, innerIndex) => {
-              const pageIndex = sheetIndex * 2 + innerIndex;
+              const pageIndex = sheetIndex * pagesPerSheet + innerIndex;
 
               return (
                 <div
@@ -468,6 +478,27 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
             {backButtonLabel}
           </button>
         ) : null}
+        <div className="invoice-print-options">
+          <span className="invoice-print-label">Paper size</span>
+          <button
+            type="button"
+            className={`invoice-print-option ${
+              printPaper === "A5" ? "is-active" : ""
+            }`}
+            onClick={() => setPrintPaper("A5")}
+          >
+            A5 Landscape
+          </button>
+          <button
+            type="button"
+            className={`invoice-print-option ${
+              printPaper === "A4" ? "is-active" : ""
+            }`}
+            onClick={() => setPrintPaper("A4")}
+          >
+            A4 Landscape
+          </button>
+        </div>
         <button
           type="button"
           className="invoice-action-btn invoice-action-btn-secondary"
