@@ -251,7 +251,7 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
 
   return data ? (
     <div className="invoice-template-container">
-      <style>{`@media print { @page { size: ${pageSizeRule}; margin: 1mm; } }`}</style>
+      <style>{`@media print { @page { size: ${pageSizeRule}; margin: 0; } }`}</style>
       <div id="invoice-root" className="invoice-pages-stack">
         {sheetPages.map((sheet, sheetIndex) => (
           <div className="invoice-print-sheet" key={`sheet-${sheetIndex + 1}`}>
