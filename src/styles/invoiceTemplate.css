@@ -433,7 +433,7 @@ body {
 @media print {
   @page {
     size: auto;
-    margin: 1mm;
+    margin: 0;
   }
 
   body * {
@@ -512,7 +512,7 @@ body {
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;
-    padding: 6px !important;
+    padding: 0 !important;
     box-shadow: none !important;
     border-radius: 0 !important;
   }
