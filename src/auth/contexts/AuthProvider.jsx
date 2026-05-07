@@ -98,6 +98,20 @@ export function AuthProvider({ children }) {
     return payload.data;
   };
 
+  const requestPasswordReset = async (tenant_slug, email) => {
+    await requestJSON(`${authBaseUrl}/forgot-password`, {
+      method: "POST",
+      body: JSON.stringify({ tenant_slug, email }),
+    });
+  };
+
+  const resetPassword = async (token, newPassword) => {
+    await requestJSON(`${authBaseUrl}/reset-password`, {
+      method: "POST",
+      body: JSON.stringify({ token, password: newPassword }),
+    });
+  };
+
   const value = {
     session,
     loading,
@@ -107,6 +121,8 @@ export function AuthProvider({ children }) {
     updateTenantPaymentDetails,
     updateMyProfile,
     updateTenantProfile,
+    requestPasswordReset,
+    resetPassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

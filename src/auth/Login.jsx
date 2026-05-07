@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { useAuth } from "./contexts/useAuth";
 import "../styles/login.css";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
@@ -12,6 +12,8 @@ export function Login() {
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const successMessage = location?.state?.message || "";
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -38,6 +40,9 @@ export function Login() {
         <h1>BizFlow</h1>
         <p className="login-subtitle">Sign in to continue</p>
 
+        {successMessage && (
+          <div className="success-message">{successMessage}</div>
+        )}
         {error && <div className="error-message">{error}</div>}
 
         <form onSubmit={handleSubmit}>
@@ -78,6 +83,9 @@ export function Login() {
               placeholder="Enter your password"
               disabled={loading}
             />
+            <div className="forgot-password-row">
+              <Link to="/forgot-password">Forgot password?</Link>
+            </div>
           </div>
 
           <button type="submit" disabled={loading} className="login-button">
