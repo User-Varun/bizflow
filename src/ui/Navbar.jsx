@@ -7,6 +7,7 @@ import {
   FaUsers,
   FaFileInvoiceDollar,
   FaReceipt,
+  FaFileArchive,
 } from "react-icons/fa";
 import { UserProfile } from "./UserProfile";
 
@@ -82,6 +83,17 @@ export function Navbar() {
           <div className="list-item-sub-container">
             <FaReceipt style={{ marginRight: 8 }} />
             <span>Your Bills</span>
+          </div>
+        </NavLink>
+        <NavLink
+          className={({ isActive }) =>
+            isActive ? "list-item nav-link-active" : "nav-link-inactive"
+          }
+          to="/reports"
+        >
+          <div className="list-item-sub-container">
+            <FaFileArchive style={{ marginRight: 8 }} />
+            <span>Reports</span>
           </div>
         </NavLink>
       </ul>

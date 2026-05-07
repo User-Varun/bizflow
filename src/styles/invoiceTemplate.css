@@ -216,8 +216,8 @@ body {
   color: #444;
 }
 .terms a {
-  font-weight: bold;
-  font-size: 1.2rem;
+  font-weight: normal;
+  font-size: 11px;
   font-style: italic;
   cursor: pointer;
   text-decoration-line: underline;
@@ -243,10 +243,19 @@ body {
 }
 
 .qr {
-  width: 120px;
-  height: 120px;
+  width: 200px;
+  height: 200px;
   object-fit: contain;
   background: #ffffff;
+}
+
+.company-name {
+  font-size: 11px;
+  text-align: center;
+  margin-top: 0.3rem;
+  display: block;
+  max-width: 200px;
+  word-wrap: break-word;
 }
 
 /* small screens */

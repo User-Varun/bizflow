@@ -13,6 +13,7 @@ import { GenerateBill } from "./features/generateBill/GenerateBill";
 import { BillProvider } from "./features/generateBill/contexts/billContext";
 import { SearchItemsProvider } from "./features/generateBill/contexts/searchItemsContext";
 import { ViewBills } from "./features/ViewBills";
+import { Reports } from "./features/Reports";
 import { AuthProvider } from "./auth/contexts/AuthProvider";
 import { ProtectedRoute } from "./auth/components/ProtectedRoute";
 import { Login } from "./auth/Login";
@@ -80,6 +81,7 @@ const router = createBrowserRouter([
         path: "viewBills",
         element: <ViewBills />,
       },
+      { path: "reports", element: <Reports /> },
     ],
   },
 ]);
