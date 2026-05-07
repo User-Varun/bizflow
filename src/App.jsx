@@ -17,6 +17,8 @@ import { AuthProvider } from "./auth/contexts/AuthProvider";
 import { ProtectedRoute } from "./auth/components/ProtectedRoute";
 import { Login } from "./auth/Login";
 import { Register } from "./auth/Register";
+import { ForgotPassword } from "./auth/ForgotPassword";
+import { ResetPassword } from "./auth/ResetPassword";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const queryClient = new QueryClient({
@@ -40,6 +42,14 @@ const router = createBrowserRouter([
   {
     path: "/register",
     element: <Register />,
+  },
+  {
+    path: "/forgot-password",
+    element: <ForgotPassword />,
+  },
+  {
+    path: "/reset-password",
+    element: <ResetPassword />,
   },
   {
     path: "/",

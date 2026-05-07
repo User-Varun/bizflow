@@ -142,6 +142,32 @@
   border-left: 4px solid #c33;
 }
 
+.success-message {
+  background-color: #edf9f0;
+  color: #1f6f3a;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+  border-left: 4px solid #1f6f3a;
+}
+
+.forgot-password-row {
+  margin-top: 0.55rem;
+  text-align: right;
+  font-size: 0.9rem;
+}
+
+.forgot-password-row a {
+  color: #4f46e5;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.forgot-password-row a:hover {
+  text-decoration: underline;
+}
+
 .auth-switch-text {
   margin: 1rem 0 0;
   text-align: center;
