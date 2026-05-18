@@ -1,0 +1,147 @@
+.dealer-select-shell {
+  position: relative;
+  width: 100%;
+}
+
+.dealer-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dealer-select-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+.dealer-select-trigger-label {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dealer-select-trigger-caret {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  color: #6b7280;
+}
+
+.dealer-select-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 0.45rem);
+  z-index: 40;
+  border: 1px solid #d7d3cc;
+  border-radius: 0.85rem;
+  background: #fffdfb;
+  box-shadow: 0 18px 38px rgba(34, 24, 15, 0.14);
+  padding: 0.75rem;
+}
+
+.dealer-select-search-row {
+  margin-bottom: 0.65rem;
+}
+
+.dealer-select-search {
+  width: 100%;
+  border: 1px solid #d8d4cd;
+  border-radius: 0.65rem;
+  background: #f8f7f6;
+  color: #241a12;
+  min-height: 2.4rem;
+  padding: 0.45rem 0.7rem;
+  box-sizing: border-box;
+}
+
+.dealer-select-search::placeholder {
+  color: #8d847a;
+}
+
+.dealer-select-list {
+  max-height: 18rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.dealer-select-option {
+  width: 100%;
+  border: 1px solid #e3ddd6;
+  border-radius: 0.7rem;
+  background: #ffffff;
+  padding: 0.7rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dealer-select-option:hover,
+.dealer-select-option:focus-visible {
+  border-color: #c7b49f;
+  background: #fff8f0;
+  outline: none;
+}
+
+.dealer-select-option.active {
+  border-color: #bf6f2e;
+  background: #fff3e8;
+}
+
+.dealer-select-option-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.95rem;
+  color: #1f2937;
+}
+
+.dealer-select-option-main strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.dealer-select-option-main span,
+.dealer-select-option-meta {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.dealer-select-option-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dealer-select-empty,
+.dealer-select-loading-more,
+.dealer-select-end-note {
+  border: 1px dashed #ddd2c5;
+  border-radius: 0.7rem;
+  background: #faf7f3;
+  color: #6f5a49;
+  padding: 0.75rem 0.8rem;
+  text-align: center;
+}
+
+.dealer-select-empty p {
+  margin: 0.1rem 0;
+}
+
+.dealer-select-loading-more,
+.dealer-select-end-note {
+  font-size: 0.84rem;
+  font-weight: 700;
+}
