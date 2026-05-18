@@ -2,8 +2,7 @@ import "../../styles/generateBillStyles/billDetails.css";
 import { useBill } from "./hooks/useBill";
 import { ProductCard } from "../../ui/ProductCard.jsx";
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { requestJSON } from "../../styles/utils/requestJSON.js";
 import { PaginationComp } from "../../ui/PaginationComp.jsx";
 import {
@@ -11,6 +10,7 @@ import {
   formatSignedCurrencyAmount,
   toFixedTwo,
 } from "../../lib/formatters";
+import { DealerSelect } from "./DealerSelect.jsx";
 const STOCK_IN = import.meta.env.VITE_STOCK_IN;
 const STOCK_OUT = import.meta.env.VITE_STOCK_OUT;
 const baseUrl = import.meta.env.VITE_API_URL;
@@ -26,20 +26,6 @@ export function BillDetails({ setShowInvoice, setBillId }) {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [createdInvoiceId, setCreatedInvoiceId] = useState(null);
   const [billItemsPage, setBillItemsPage] = useState(1);
-
-  const dealersQuery = useQuery({
-    queryKey: ["dealers", state.invoice_type],
-    queryFn: () =>
-      requestJSON(
-        `${baseUrl}/dealers?invoice_type=${encodeURIComponent(state.invoice_type)}&limit=20`,
-      ),
-  });
-
-  const dealers = useMemo(() => {
-    return Array.isArray(dealersQuery.data?.result)
-      ? dealersQuery.data.result
-      : [];
-  }, [dealersQuery.data]);
 
   useEffect(() => {
     const totalItems = state.invoice_items?.length || 0;
@@ -85,11 +71,6 @@ export function BillDetails({ setShowInvoice, setBillId }) {
     const exact = Number(estimatedBillAmount || 0);
     return Number((rounded - exact).toFixed(2));
   }, [roundedEstimatedBillAmount, estimatedBillAmount]);
-
-  const selectedDealer = useMemo(() => {
-    if (!state.dealer_id) return null;
-    return dealers.find((dealer) => dealer.id === state.dealer_id) || null;
-  }, [dealers, state.dealer_id]);
 
   // mamaJi data (This data Will come from user Profile in future, when user auth is implemented )
   const mamaJiDetails = {
@@ -145,71 +126,6 @@ export function BillDetails({ setShowInvoice, setBillId }) {
     setShowInvoice(true);
   }
 
-  function handleSelectDealer(selectedId) {
-    if (!selectedId) {
-      dispatch({
-        type: "SET_FIELDS",
-        payload: {
-          dealer_id: "",
-          invoice_to:
-            state.invoice_type === STOCK_OUT ? "" : mamaJiDetails.name,
-          address_to:
-            state.invoice_type === STOCK_OUT ? "" : mamaJiDetails.address,
-          phone_to:
-            state.invoice_type === STOCK_OUT ? "" : mamaJiDetails.phoneNo,
-          invoice_from:
-            state.invoice_type === STOCK_OUT ? mamaJiDetails.name : "",
-          address_from:
-            state.invoice_type === STOCK_OUT ? mamaJiDetails.address : "",
-          phone_from:
-            state.invoice_type === STOCK_OUT ? mamaJiDetails.phoneNo : "",
-          other_party_gst: "",
-          ...(state.invoice_type === STOCK_IN ? { invoice_items: [] } : {}),
-        },
-      });
-
-      if (state.invoice_type === STOCK_IN) {
-        setBillItemsPage(1);
-      }
-
-      return;
-    }
-
-    const selected = dealers.find((dealer) => dealer.id === selectedId);
-    if (!selected) return;
-
-    const shouldResetStockInItems =
-      state.invoice_type === STOCK_IN &&
-      Boolean(state.dealer_id) &&
-      state.dealer_id !== selected.id;
-
-    dispatch({
-      type: "SET_FIELDS",
-      payload:
-        state.invoice_type === STOCK_OUT
-          ? {
-              dealer_id: selected.id,
-              invoice_to: selected.name || "",
-              address_to: selected.address || "",
-              phone_to: selected.phone || "",
-              other_party_gst: selected.gst || "",
-              ...(shouldResetStockInItems ? { invoice_items: [] } : {}),
-            }
-          : {
-              dealer_id: selected.id,
-              invoice_from: selected.name || "",
-              address_from: selected.address || "",
-              phone_from: selected.phone || "",
-              other_party_gst: selected.gst || "",
-              ...(shouldResetStockInItems ? { invoice_items: [] } : {}),
-            },
-    });
-
-    if (shouldResetStockInItems) {
-      setBillItemsPage(1);
-    }
-  }
-
   const generateInvoiceMutation = useMutation({
     mutationFn: (payload) =>
       requestJSON(`${baseUrl}/generateInvoice`, {
@@ -244,7 +160,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
       return;
     }
 
-    if (!state.dealer_id || !selectedDealer) {
+    if (!state.dealer_id) {
       setErrorModalMessage(
         "Please select a dealer before generating the bill.",
       );
@@ -512,26 +428,50 @@ export function BillDetails({ setShowInvoice, setBillId }) {
 
           <div className="form-el-container">
             <span>Select Dealer</span>
-            <select
-              className="formEl"
-              required
-              value={state.dealer_id || ""}
-              onChange={(e) => handleSelectDealer(e.target.value)}
-              disabled={
-                dealersQuery.isLoading || generateInvoiceMutation.isPending
+            <DealerSelect
+              invoiceType={state.invoice_type}
+              selectedDealerId={state.dealer_id}
+              selectedDealerLabel={
+                state.dealer_id
+                  ? state.invoice_type === STOCK_OUT
+                    ? state.invoice_to
+                    : state.invoice_from
+                  : ""
               }
-            >
-              <option value="">
-                {dealersQuery.isLoading
-                  ? "Loading dealers..."
-                  : "Select dealer"}
-              </option>
-              {dealers.map((dealer) => (
-                <option key={dealer.id} value={dealer.id}>
-                  {dealer.name} ({dealer.phone})
-                </option>
-              ))}
-            </select>
+              onSelectDealer={(dealer) => {
+                const shouldResetStockInItems =
+                  state.invoice_type === STOCK_IN &&
+                  Boolean(state.dealer_id) &&
+                  state.dealer_id !== dealer.id;
+
+                dispatch({
+                  type: "SET_FIELDS",
+                  payload:
+                    state.invoice_type === STOCK_OUT
+                      ? {
+                          dealer_id: dealer.id,
+                          invoice_to: dealer.name || "",
+                          address_to: dealer.address || "",
+                          phone_to: dealer.phone || "",
+                          other_party_gst: dealer.gst || "",
+                          ...(shouldResetStockInItems ? { invoice_items: [] } : {}),
+                        }
+                      : {
+                          dealer_id: dealer.id,
+                          invoice_from: dealer.name || "",
+                          address_from: dealer.address || "",
+                          phone_from: dealer.phone || "",
+                          other_party_gst: dealer.gst || "",
+                          ...(shouldResetStockInItems ? { invoice_items: [] } : {}),
+                        },
+                });
+
+                if (shouldResetStockInItems) {
+                  setBillItemsPage(1);
+                }
+              }}
+              disabled={generateInvoiceMutation.isPending}
+            />
           </div>
 
           {state.invoice_type === STOCK_IN ? (
@@ -553,18 +493,6 @@ export function BillDetails({ setShowInvoice, setBillId }) {
             </div>
           ) : null}
         </div>
-
-        {dealersQuery.isLoading ? null : dealers.length === 0 ? (
-          <div className="no-dealer-cta">
-            <p>
-              No dealers found for <strong>{state.invoice_type}</strong>. Add a
-              dealer first.
-            </p>
-            <Link className="go-dealers-link" to="/dealers">
-              Go to Dealers
-            </Link>
-          </div>
-        ) : null}
 
         <div
           id="billItemsContainer"
