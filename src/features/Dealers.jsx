@@ -30,7 +30,7 @@ export function Dealers() {
   const [activeType, setActiveType] = useState("stock_out");
   const [searchInput, setSearchInput] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(8);
+  const [pageSize] = useState(10);
   const [showAddForm, setShowAddForm] = useState(false);
   const [formState, setFormState] = useState(INITIAL_FORM);
   const [formError, setFormError] = useState("");
@@ -298,7 +298,7 @@ export function Dealers() {
                 </div>
               </div>
 
-              <div className="dealerCardHint">Open details -></div>
+              <div className="dealerCardHint">Open details</div>
             </button>
           ))
         ) : (
