@@ -242,6 +242,7 @@ exports.generateInvoice = catchAsync(async (req, res, next) => {
         // generating invoice number (for invoice )
         const invoice_number = await generateInvoiceNumber({
           tenantId: tenant.id,
+          invoiceType: invoiceDetails.invoice_type,
           transaction,
         });
 

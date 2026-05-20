@@ -7,7 +7,7 @@ const Dealer = require("../models/dealerModel");
 const { catchAsync } = require("../utilities/catchAsync");
 const AppError = require("../utilities/appError");
 const { calculateInvoiceData } = require("../utilities/calculateInvoiceData");
-const { Op } = require("sequelize");
+const { Op, literal } = require("sequelize");
 
 function itemIdentityKey(item) {
   if (item.product_catalog_id) return `catalog:${item.product_catalog_id}`;
@@ -224,6 +224,11 @@ exports.getInvoices = catchAsync(async (req, res) => {
           },
         },
         {
+          legacy_invoice_number: {
+            [Op.iLike]: `%${search}%`,
+          },
+        },
+        {
           supplier_invoice_number: {
             [Op.iLike]: `%${search}%`,
           },
@@ -275,7 +280,21 @@ exports.getInvoices = catchAsync(async (req, res) => {
 
   const { rows: invoices, count: total } = await Invoice.findAndCountAll({
     where,
-    order: [["createdAt", "DESC"]],
+    order: [
+      // extract year and sequence whether invoice_number uses '-' or '_' as separator
+      [
+        literal(
+          `CAST(regexp_replace("invoice_number", '.*[_-]([0-9]{4})[_-]([0-9]{3})$', '\\1') AS INTEGER)`,
+        ),
+        "DESC",
+      ],
+      [
+        literal(
+          `CAST(regexp_replace("invoice_number", '.*[_-]([0-9]{4})[_-]([0-9]{3})$', '\\2') AS INTEGER)`,
+        ),
+        "DESC",
+      ],
+    ],
     limit: pageSize,
     offset,
   });

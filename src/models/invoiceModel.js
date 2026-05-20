@@ -22,6 +22,10 @@ const Invoice = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false, // unique-ness per tenant (not global) is defined by index
     },
+    legacy_invoice_number: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     supplier_invoice_number: {
       type: DataTypes.STRING(120),
       allowNull: true,
@@ -91,7 +95,12 @@ const Invoice = sequelize.define(
     // automatically created_at and updated_at by ORM
   },
   {
-    indexes: [{ unique: true, fields: ["tenant_id", "invoice_number"] }],
+    indexes: [
+      {
+        unique: true,
+        fields: ["tenant_id", "invoice_type", "invoice_number"],
+      },
+    ],
   },
 );
 

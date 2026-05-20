@@ -269,9 +269,18 @@ exports.getDealerInvoices = catchAsync(async (req, res, next) => {
   }
 
   if (search) {
-    where.invoice_number = {
-      [Op.iLike]: `%${search}%`,
-    };
+    where[Op.or] = [
+      {
+        invoice_number: {
+          [Op.iLike]: `%${search}%`,
+        },
+      },
+      {
+        legacy_invoice_number: {
+          [Op.iLike]: `%${search}%`,
+        },
+      },
+    ];
   }
 
   const offset = (page - 1) * pageSize;
