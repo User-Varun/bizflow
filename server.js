@@ -238,6 +238,39 @@ async function ensureInvoiceSupplierInvoiceNumberColumn() {
   await sequelize.query(`
     ALTER TABLE "invoices"
     ADD COLUMN IF NOT EXISTS "supplier_invoice_number" VARCHAR(120);
+  `)
+}
+
+async function ensureInvoiceNumberSplitColumns() {
+  await sequelize.query(`
+    ALTER TABLE "invoices"
+    ADD COLUMN IF NOT EXISTS "legacy_invoice_number" VARCHAR(120);
+  `);
+
+  await sequelize.query(`
+    DO $$
+    DECLARE
+      index_record record;
+    BEGIN
+      FOR index_record IN
+        SELECT indexname, indexdef
+        FROM pg_indexes
+        WHERE schemaname = current_schema()
+          AND tablename = 'invoices'
+      LOOP
+        IF index_record.indexdef ILIKE '%UNIQUE%'
+          AND index_record.indexdef ILIKE '%tenant_id%'
+          AND index_record.indexdef ILIKE '%invoice_number%'
+          AND index_record.indexdef NOT ILIKE '%invoice_type%' THEN
+          EXECUTE format('DROP INDEX IF EXISTS %I', index_record.indexname);
+        END IF;
+      END LOOP;
+    END $$;
+  `);
+
+  await sequelize.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS "invoices_tenant_type_number_uq"
+    ON "invoices" ("tenant_id", "invoice_type", "invoice_number");
   `);
 }
 
@@ -255,6 +288,7 @@ async function server() {
     await ensureProductCatalogDealerColumn();
     await ensureInvoiceDealerColumn();
     await ensureInvoiceSupplierInvoiceNumberColumn();
+    await ensureInvoiceNumberSplitColumns();
 
     app.listen(port, () => {
       console.log("DB connected successfully!");
