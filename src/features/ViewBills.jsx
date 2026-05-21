@@ -25,6 +25,7 @@ export function ViewBills() {
   const [editingInvoiceId, setEditingInvoiceId] = useState(null);
   const [editInvoiceError, setEditInvoiceError] = useState("");
   const [showInvoice, setShowInvoice] = useState(false);
+  const [autoPrintInvoice, setAutoPrintInvoice] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(8);
   const debouncedSearch = useDebouncedValue(searchInput, 350);
@@ -349,9 +350,11 @@ export function ViewBills() {
       ) : (
         <InvoiceTemplate
           id={id}
+          autoPrint={autoPrintInvoice}
           onBack={() => {
             setShowInvoice(false);
             setId(null);
+            setAutoPrintInvoice(false);
           }}
           backButtonLabel="Back to All Bills"
         />

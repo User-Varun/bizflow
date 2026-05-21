@@ -488,6 +488,8 @@ body {
     display: flex !important;
     flex-direction: column !important;
     gap: 10mm !important;
+    width: 100% !important;
+    align-items: center !important;
   }
 
   .invoice-print-sheet:last-child {
@@ -498,6 +500,11 @@ body {
   .invoice-print-sheet .invoice-print-page {
     zoom: 1;
     width: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: flex-start !important;
+    padding: 8mm 0 0 !important;
+    box-sizing: border-box !important;
   }
 
   #invoice-root,
@@ -528,6 +535,9 @@ body {
 
   .invoice-border {
     border-width: 2px !important;
+    width: min(100%, 1180px) !important;
+    margin: 0 auto !important;
+    overflow: visible !important;
   }
 
   .invoice-page-tag {
@@ -536,6 +546,7 @@ body {
     font-size: 0.58rem !important;
     padding: 0.04rem 0.38rem !important;
     border-width: 1px !important;
+    z-index: 3 !important;
   }
 
   .inv-top {

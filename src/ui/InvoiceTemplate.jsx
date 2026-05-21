@@ -1,6 +1,6 @@
 import "../styles/invoiceTemplate.css";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { requestJSON } from "../styles/utils/requestJSON";
 import { LoadingSpinner } from "./LoadingSpinner";
 import {
@@ -14,8 +14,14 @@ import {
 const baseUrl = import.meta.env.VITE_API_URL;
 const ITEMS_PER_PAGE = 6;
 
-export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
+export function InvoiceTemplate({
+  id,
+  onBack,
+  backButtonLabel = "Back",
+  autoPrint = false,
+}) {
   const [printPaper, setPrintPaper] = useState("A5");
+  const hasAutoPrintedRef = useRef(false);
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["invoice", id],
     queryFn: () =>
@@ -241,6 +247,17 @@ export function InvoiceTemplate({ id, onBack, backButtonLabel = "Back" }) {
   );
 
   const pageSizeRule = printPaper === "A4" ? "A4 landscape" : "A5 landscape";
+
+  useEffect(() => {
+    if (!data || !autoPrint || hasAutoPrintedRef.current) return;
+
+    hasAutoPrintedRef.current = true;
+    const timerId = window.setTimeout(() => {
+      window.print();
+    }, 250);
+
+    return () => window.clearTimeout(timerId);
+  }, [autoPrint, data]);
 
   if (isLoading) {
     return <LoadingSpinner label="Loading invoice..." minHeight="300px" />;

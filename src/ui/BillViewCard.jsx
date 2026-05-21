@@ -210,6 +210,7 @@ export function BillViewCard({
         {success ? <p className="bill-date-success">{success}</p> : null}
 
         <button
+          type="button"
           className="bill-card-btn"
           onClick={() => {
             setId(res.id);
