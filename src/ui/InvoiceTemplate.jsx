@@ -12,7 +12,7 @@ import {
 } from "../lib/formatters";
 
 const baseUrl = import.meta.env.VITE_API_URL;
-const ITEMS_PER_PAGE = 3;
+const ITEMS_PER_PAGE = 6;
 
 export function InvoiceTemplate({
   id,

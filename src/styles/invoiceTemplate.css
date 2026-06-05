@@ -23,7 +23,6 @@ body {
 
 .invoice-print-page {
   width: 100%;
-  padding: 6mm 0 0 !important;
 }
 
 .invoice-print-sheet {
@@ -457,10 +456,26 @@ body {
 }
 @media print {
 
+  @media print {
+  .qr {
+    width: 150px !important;
+    height: 150px !important;
+  }
+}
 
     .inv-table {
     font-size: 0.72rem !important; /* currently 0.66 */
   }
+
+  .invoice-print-sheet {
+  page-break-after: always;
+  break-after: page;
+}
+
+.invoice-print-sheet:last-child {
+  page-break-after: auto;
+  break-after: auto;
+}
 
   .inv-table th,
   .inv-table td {
@@ -469,6 +484,8 @@ body {
 
   .invoice-print-page {
     width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
   }
 
   .invoice-container {
@@ -507,8 +524,6 @@ body {
 
   html,
   body {
-    width: 210mm;
-    height: 148mm;
     margin: 0;
     padding: 0;
     background: white;
