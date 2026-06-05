@@ -12,7 +12,7 @@ import {
 } from "../lib/formatters";
 
 const baseUrl = import.meta.env.VITE_API_URL;
-const ITEMS_PER_PAGE = 6;
+const ITEMS_PER_PAGE = 3;
 
 export function InvoiceTemplate({
   id,
@@ -20,7 +20,9 @@ export function InvoiceTemplate({
   backButtonLabel = "Back",
   autoPrint = false,
 }) {
-  const [printPaper, setPrintPaper] = useState("A5");
+  const [pdfUrl, setPdfUrl] = useState(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [showPdfModal, setShowPdfModal] = useState(false);
   const hasAutoPrintedRef = useRef(false);
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["invoice", id],
@@ -199,8 +201,38 @@ export function InvoiceTemplate({
     return result + " only";
   }
 
-  function handlePrintInvoice() {
-    window.print();
+  async function handleOpenPdfPreview() {
+    if (!id) return;
+    setPdfLoading(true);
+    try {
+      const paper = "A5";
+      const res = await fetch(`${baseUrl}/viewInvoices/${id}/pdf?paper=${encodeURIComponent(paper)}&orientation=landscape`, {
+        method: "GET",
+        credentials: "include",
+        headers: { Accept: "application/pdf" },
+      });
+
+      if (!res.ok) throw new Error(`Failed to fetch PDF: ${res.status}`);
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      setPdfUrl(url);
+      setShowPdfModal(true);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error(e);
+      alert(e.message || "Failed to load PDF preview");
+    } finally {
+      setPdfLoading(false);
+    }
+  }
+
+  function closePdfModal() {
+    setShowPdfModal(false);
+    if (pdfUrl) {
+      URL.revokeObjectURL(pdfUrl);
+      setPdfUrl(null);
+    }
   }
 
   function formatDate(dateStr) {
@@ -246,7 +278,6 @@ export function InvoiceTemplate({
       ),
   );
 
-  const pageSizeRule = printPaper === "A4" ? "A4 landscape" : "A5 landscape";
 
   useEffect(() => {
     if (!data || !autoPrint || hasAutoPrintedRef.current) return;
@@ -268,7 +299,6 @@ export function InvoiceTemplate({
 
   return data ? (
     <div className="invoice-template-container">
-      <style>{`@media print { @page { size: ${pageSizeRule}; margin: 0; } }`}</style>
       <div id="invoice-root" className="invoice-pages-stack">
         {sheetPages.map((sheet, sheetIndex) => (
           <div className="invoice-print-sheet" key={`sheet-${sheetIndex + 1}`}>
@@ -281,17 +311,17 @@ export function InvoiceTemplate({
                   key={`page-${pageIndex + 1}`}
                 >
                   <div className="invoice-container">
-                    <div className="invoice-border">
+                    <div className="invoice-border invoice-margin">
                       <div className="invoice-page-tag">
                         Page {pageIndex + 1}/{totalPages}
                       </div>
                       <header className="inv-top">
                         <div className="inv-left">
                           <h2 className="company">{data.invoice_from}</h2>
-                          <span className="text-s">{data.address_from}</span>
-                          <span className="text-s">
+                          <p className="text-s">{data.address_from}</p>
+                          <p className="text-s">
                             Phone: {data.phone_from}
-                          </span>
+                          </p>
                         </div>
 
                         <div className="inv-right">
@@ -374,7 +404,7 @@ export function InvoiceTemplate({
                                   <td>{item.hsn_code || "-"}</td>
                                   <td>{formatAmt(item.mrp ?? 0)}</td>
                                   <td>{formatAmt(item.rate ?? 0)}</td>
-                                  <td className="discount-cell">
+                                  <td>
                                     {formatPercent(item.discount || 0)}
                                   </td>
                                   <td>{formatPercent(item.sgst || 0)}</td>
@@ -437,7 +467,7 @@ export function InvoiceTemplate({
                             {!isStockIn ? (
                               <>
                                 <img className="qr" src={qrSrc} alt="QR code" />
-                                <span>
+                                <span className="company-name">
                                   For {data.invoice_from || "Business"}
                                 </span>
                               </>
@@ -495,7 +525,7 @@ export function InvoiceTemplate({
             {backButtonLabel}
           </button>
         ) : null}
-        <div className="invoice-print-options">
+        {/* <div className="invoice-print-options">
           <span className="invoice-print-label">Paper size</span>
           <button
             type="button"
@@ -515,15 +545,40 @@ export function InvoiceTemplate({
           >
             A4 Landscape
           </button>
-        </div>
+        </div> */}
         <button
           type="button"
-          className="invoice-action-btn invoice-action-btn-secondary"
-          onClick={handlePrintInvoice}
+          className="invoice-action-btn invoice-action-btn-primary"
+          onClick={handleOpenPdfPreview}
+          disabled={pdfLoading}
         >
-          Print Invoice
+          {pdfLoading ? "Loading PDF..." : "Download or Print Invoice"}
         </button>
       </div>
+      {showPdfModal && (
+        <div className="invoice-pdf-modal-overlay" onClick={closePdfModal}>
+          <div className="invoice-pdf-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="invoice-pdf-modal-actions">
+              <button
+                type="button"
+                onClick={() => {
+                  const iframe = document.getElementById("invoice-pdf-iframe");
+                  if (iframe && iframe.contentWindow) iframe.contentWindow.print();
+                }}
+              >
+                Print
+              </button>
+              <a href={pdfUrl} download={`invoice-${displayInvoiceNumber || id}.pdf`}>
+                <button type="button">Download</button>
+              </a>
+              <button type="button" onClick={closePdfModal}>
+                Close
+              </button>
+            </div>
+            <iframe id="invoice-pdf-iframe" title="Invoice PDF" src={pdfUrl} style={{ width: "100%", height: "80vh", border: "none" }} />
+          </div>
+        </div>
+      )}
     </div>
   ) : (
     <span>Invoice not found.</span>
