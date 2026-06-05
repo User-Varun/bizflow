@@ -36,6 +36,10 @@ export function InvoiceTemplate({
     refetchOnMount: "always",
   });
 
+  function handlePrintInvoice(){
+    window.print();
+  }
+
   function buildQrSrc(qrUrl, versionSeed) {
     const url = String(qrUrl || "").trim();
     if (!url) return "/qr.png";
@@ -546,14 +550,16 @@ export function InvoiceTemplate({
             A4 Landscape
           </button>
         </div> */}
-        <button
+        {/* <button
           type="button"
           className="invoice-action-btn invoice-action-btn-primary"
           onClick={handleOpenPdfPreview}
           disabled={pdfLoading}
         >
           {pdfLoading ? "Loading PDF..." : "Download or Print Invoice"}
-        </button>
+        </button> */}
+
+        <button type="button"  className="invoice-action-btn invoice-action-btn-primary" onClick={handlePrintInvoice} disabled={pdfLoading} >{pdfLoading ? "Loading PDF..." : "Print Invoice" } </button>
       </div>
       {showPdfModal && (
         <div className="invoice-pdf-modal-overlay" onClick={closePdfModal}>
