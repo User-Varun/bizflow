@@ -14,6 +14,8 @@ import {
 const baseUrl = import.meta.env.VITE_API_URL;
 const ITEMS_PER_PAGE = 6;
 
+
+
 export function InvoiceTemplate({
   id,
   onBack,
@@ -36,7 +38,7 @@ export function InvoiceTemplate({
     refetchOnMount: "always",
   });
 
-  function handlePrintInvoice(){
+  function handlePrintInvoice() {
     window.print();
   }
 
@@ -262,13 +264,13 @@ export function InvoiceTemplate({
   const itemPages =
     invoiceItems.length > 0
       ? Array.from(
-          { length: Math.ceil(invoiceItems.length / ITEMS_PER_PAGE) },
-          (_, pageIndex) =>
-            invoiceItems.slice(
-              pageIndex * ITEMS_PER_PAGE,
-              (pageIndex + 1) * ITEMS_PER_PAGE,
-            ),
-        )
+        { length: Math.ceil(invoiceItems.length / ITEMS_PER_PAGE) },
+        (_, pageIndex) =>
+          invoiceItems.slice(
+            pageIndex * ITEMS_PER_PAGE,
+            (pageIndex + 1) * ITEMS_PER_PAGE,
+          ),
+      )
       : [[]];
 
   const totalPages = itemPages.length;
@@ -308,6 +310,8 @@ export function InvoiceTemplate({
           <div className="invoice-print-sheet" key={`sheet-${sheetIndex + 1}`}>
             {sheet.map((pageItems, innerIndex) => {
               const pageIndex = sheetIndex * pagesPerSheet + innerIndex;
+
+              const empty_rows = ITEMS_PER_PAGE - pageItems.length;
 
               return (
                 <div
@@ -376,8 +380,9 @@ export function InvoiceTemplate({
                             <th>Amount</th>
                           </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="table-body-border-bottom">
                           {pageItems.length > 0 ? (
+
                             pageItems.map((item, idx) => {
                               const baseAmount =
                                 Number(item.rate || 0) *
@@ -424,6 +429,21 @@ export function InvoiceTemplate({
                               </td>
                             </tr>
                           )}
+
+                          {Array.from({ length: empty_rows }).map((_, index )=> {
+                            return <tr className="empty-row" key={`empty-${index}`}>
+                              <td>&nbsp;</td>
+                              <td></td>
+                              <td></td>
+                              <td></td>
+                              <td></td>
+                              <td></td>
+                              <td></td>
+                              <td></td>
+                              <td></td>
+                              <td></td>
+                            </tr>
+                          })}
                         </tbody>
                       </table>
                       <div className="subTotalContainer">
@@ -559,7 +579,7 @@ export function InvoiceTemplate({
           {pdfLoading ? "Loading PDF..." : "Download or Print Invoice"}
         </button> */}
 
-        <button type="button"  className="invoice-action-btn invoice-action-btn-primary" onClick={handlePrintInvoice} disabled={pdfLoading} >{pdfLoading ? "Loading PDF..." : "Print Invoice" } </button>
+        <button type="button" className="invoice-action-btn invoice-action-btn-primary" onClick={handlePrintInvoice} disabled={pdfLoading} >{pdfLoading ? "Loading PDF..." : "Print Invoice"} </button>
       </div>
       {showPdfModal && (
         <div className="invoice-pdf-modal-overlay" onClick={closePdfModal}>
