@@ -1,90 +1,134 @@
-const Invoice = require("../models/invoiceModel");
-const InvoiceItem = require("../models/invoiceItemsModel");
+// controllers/reportController.js
+
 const { Op } = require("sequelize");
-const { catchAsync } = require("../utilities/catchAsync");
-const { invoiceToPdfBuffer } = require("../utilities/pdfGenerator");
-const puppeteer = require("puppeteer");
-const { renderInvoiceHtml } = require("../utilities/htmlInvoiceTemplate");
-const archiver = require("archiver");
-const { calculateInvoiceData } = require("../utilities/calculateInvoiceData");
 
-exports.downloadBills = catchAsync(async (req, res, next) => {
-  const tenant = req.tenant;
-  const { range, dateFrom, dateTo } = req.body || {};
+const Invoice = require("../models/invoiceModel");
 
-  let start = null;
-  let end = null;
+const generateReportPdf = require("../utilities/generateReportPdf");
 
-  const now = new Date();
-
-  if (range === "last_month") {
-    const firstDayLastMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
-    const firstDayThisMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-    start = firstDayLastMonth;
-    end = firstDayThisMonth;
-  } else if (range === "this_month") {
-    start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-    end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
-  } else if (dateFrom && dateTo) {
-    start = new Date(dateFrom);
-    end = new Date(dateTo);
-    // include the whole end day
-    end.setUTCDate(end.getUTCDate() + 1);
-  } else {
-    return next(new Error("invalid date range"));
-  }
-
-  const invoices = await Invoice.findAll({
-    where: {
-      tenant_id: tenant.id,
-      createdAt: { [Op.gte]: start, [Op.lt]: end },
-    },
-    order: [["createdAt", "ASC"]],
-  });
-
-  // set response headers for zip
-  res.setHeader("Content-Type", "application/zip");
-  const filename = `bills-${new Date().toISOString().slice(0,10)}.zip`;
-  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-
-  const archive = archiver("zip", { zlib: { level: 9 } });
-  archive.on("error", (err) => next(err));
-  archive.pipe(res);
-
-  // render all invoices to PDFs using a single headless browser instance
-  let browser = null;
+exports.downloadReport = async (req, res, next) => {
   try {
-    browser = await puppeteer.launch({ args: ["--no-sandbox", "--disable-setuid-sandbox"] });
-    const page = await browser.newPage();
+    const tenant = req.tenant;
 
-    for (const invoice of invoices) {
-      const items = await InvoiceItem.findAll({ where: { invoice_id: invoice.id }, order: [["createdAt", "ASC"]] });
-      const calculatedData = calculateInvoiceData(items);
-      const invoiceObj = {
-        ...invoice.toJSON(),
-        invoice_items: items,
-        company_gstin: tenant.gstin || "",
-        account_number: tenant.account_number || "",
-        ifsc_code: tenant.ifsc_code || "",
-        qr_url: tenant.qr_url || "",
-        discount_total: calculatedData.discount_total,
-      };
-      const html = renderInvoiceHtml(invoiceObj);
-      await page.setContent(html, { waitUntil: "networkidle0" });
-      const pdfBuffer = await page.pdf({ format: "A4", printBackground: true });
-      const entryName = `invoice-${invoice.invoice_number}.pdf`;
-      archive.append(pdfBuffer, { name: entryName });
+    const { range, dateFrom, dateTo } = req.body;
+
+    let start;
+    let end;
+
+    const now = new Date();
+
+    if (range === "this_month") {
+      start = new Date(
+        Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          1
+        )
+      );
+
+      end = new Date(
+        Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth() + 1,
+          1
+        )
+      );
     }
 
-    await archive.finalize();
-  } catch (err) {
-    if (!res.headersSent) return next(err);
-    console.error("reports download error:", err);
-  } finally {
-    try {
-      if (browser) await browser.close();
-    } catch (e) {
-      // ignore
+    else if (range === "last_month") {
+      start = new Date(
+        Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth() - 1,
+          1
+        )
+      );
+
+      end = new Date(
+        Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          1
+        )
+      );
     }
+
+    else if (dateFrom && dateTo) {
+      start = new Date(dateFrom);
+
+      end = new Date(dateTo);
+
+      end.setUTCDate(end.getUTCDate() + 1);
+    }
+
+    else {
+      return res.status(400).json({
+        status: "fail",
+        message: "Invalid date range",
+      });
+    }
+
+    const invoices = await Invoice.findAll({
+      where: {
+        tenant_id: tenant.id,
+        createdAt: {
+          [Op.gte]: start,
+          [Op.lt]: end,
+        },
+      },
+
+      order: [["createdAt", "DESC"]],
+    });
+
+    const totalBills = invoices.length;
+
+    const totalRevenue = invoices.reduce(
+      (sum, invoice) =>
+        sum + Number(invoice.grand_total),
+      0
+    );
+
+    const totalGST = invoices.reduce(
+      (sum, invoice) =>
+        sum +
+        Number(invoice.cgst_total) +
+        Number(invoice.sgst_total),
+      0
+    );
+
+    const averageBillValue =
+      totalBills === 0
+        ? 0
+        : totalRevenue / totalBills;
+
+    const pdfBuffer = await generateReportPdf({
+      tenant,
+      invoices,
+
+      reportTitle: range || "Custom",
+
+      summary: {
+        totalBills,
+        totalRevenue,
+        totalGST,
+        averageBillValue,
+      },
+    });
+
+    res.setHeader(
+      "Content-Type",
+      "application/pdf"
+    );
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="report-${Date.now()}.pdf"`
+    );
+
+    res.send(pdfBuffer);
   }
-});
+
+  catch (err) {
+    next(err);
+  }
+};
