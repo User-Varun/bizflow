@@ -7,12 +7,8 @@
   "type": "commonjs",
   "main": "server.js",
   "scripts": {
-    "dev": " NODE_ENV=development nodemon server.js",
-    "start": "NODE_ENV=production node server.js",
-    "start:dev": "npm run dev",
-    "start:prod": "npm run start",
-    "migrate:invoice-dealers": "node scripts/backfillInvoiceDealers.js",
-    "migrate:invoice-numbers": "node scripts/backfillInvoiceNumbers.js"
+    "dev": " NODE_ENV=dev nodemon server.js",
+    "prod": "NODE_ENV=prod node server.js"
   },
   "dependencies": {
     "archiver": "^5.3.1",

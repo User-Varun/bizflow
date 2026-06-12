@@ -2,12 +2,15 @@ const path = require("path");
 const fs = require("fs");
 const dotenv = require("dotenv");
 
-const nodeEnv = process.env.NODE_ENV || "development";
+const nodeEnv = process.env.NODE_ENV || "dev";
 const envCandidates = [
-  path.resolve(__dirname, `.env.${nodeEnv}`),
-  path.resolve(__dirname, "config.env"),
-  path.resolve(__dirname, ".env"),
+  path.resolve(__dirname, `.env.${nodeEnv}`)
 ];
+
+
+console.log(nodeEnv);
+console.log(fs.existsSync(envCandidates));
+
 
 const envPath = envCandidates.find((candidate) => fs.existsSync(candidate));
 

@@ -1,1 +1,0 @@
-This file is made for initialing this directory repo (merging frontend and backend branch)
