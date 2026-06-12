@@ -1,0 +1,35 @@
+.loading-spinner-wrap {
+  min-height: 220px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.loading-spinner-wrap-fullscreen {
+  min-height: 100vh;
+}
+
+.loading-spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 0.2rem solid rgba(30, 35, 44, 0.2);
+  border-top-color: #1e232c;
+  border-radius: 999px;
+  animation: app-spinner-rotate 0.8s linear infinite;
+}
+
+.loading-spinner-label {
+  margin: 0;
+  color: #2f3b48;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+@keyframes app-spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -1,0 +1,15 @@
+#searchBarContainer {
+  background-color: gainsboro;
+  padding: 0.4rem;
+  display: flex;
+  gap: 0.3rem;
+  width: 100%;
+  border-radius: 0.5rem;
+}
+
+.searchBtn {
+  background-color: #bfbfbf;
+  border-radius: 50%;
+  padding: 0.6rem;
+  cursor: pointer;
+}

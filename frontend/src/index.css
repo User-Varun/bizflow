@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+/* Common content container for screens ( below navbar )  
+
+1.inventory 
+2.product catalog
+3. view Bills
+
+*/
+
+.below-navbar-content-container {
+  width: 100%;
+  max-width: 1700px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  padding: 0.7rem clamp(0.9rem, 2vw, 1.8rem) 1rem;
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  .below-navbar-content-container {
+    width: 100%;
+    padding: 0.6rem 0.75rem 0.9rem;
+    gap: 0.7rem;
+  }
+}

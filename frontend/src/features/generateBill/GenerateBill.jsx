@@ -1,0 +1,36 @@
+import "../../styles/generateBillStyles/generateBill.css";
+
+// import { InvoiceFormat } from "./InvoiceFormat";
+import { BillDetails } from "./BillDetails";
+import { SearchItems } from "./SearchItems";
+// import { useBill } from "./hooks/useBill";
+import { InvoiceTemplate } from "../../ui/InvoiceTemplate";
+import { useState } from "react";
+
+export function GenerateBill() {
+  const [showInvoice, setShowInvoice] = useState(false);
+  const [billId, setBillId] = useState(null);
+
+  return (
+    <section
+      id="generateBillContainer"
+      className={showInvoice ? "generate-bill-invoice-view" : ""}
+    >
+      {showInvoice ? (
+        <InvoiceTemplate
+          id={billId}
+          onBack={() => {
+            setShowInvoice(false);
+            setBillId(null);
+          }}
+          backButtonLabel="Back to Generate Bill"
+        />
+      ) : (
+        <>
+          <BillDetails setShowInvoice={setShowInvoice} setBillId={setBillId} />
+          <SearchItems />
+        </>
+      )}
+    </section>
+  );
+}
