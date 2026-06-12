@@ -1,0 +1,36 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "backend of BizFlow : Distributor's business management app ",
+  "license": "ISC",
+  "author": "varun pawar",
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "dev": " NODE_ENV=development nodemon server.js",
+    "start": "NODE_ENV=production node server.js",
+    "start:dev": "npm run dev",
+    "start:prod": "npm run start",
+    "migrate:invoice-dealers": "node scripts/backfillInvoiceDealers.js",
+    "migrate:invoice-numbers": "node scripts/backfillInvoiceNumbers.js"
+  },
+  "dependencies": {
+    "archiver": "^5.3.1",
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^6.9.14",
+    "pdfkit": "^0.13.0",
+    "pdfkit-table": "^0.2.11",
+    "pg": "^8.20.0",
+    "pg-hstore": "^2.3.4",
+    "puppeteer": "^21.3.8",
+    "sequelize": "^6.37.8"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}
