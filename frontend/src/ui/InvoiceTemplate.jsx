@@ -14,8 +14,6 @@ import {
 const baseUrl = import.meta.env.VITE_API_URL;
 const ITEMS_PER_PAGE = 6;
 
-
-
 export function InvoiceTemplate({
   id,
   onBack,
@@ -23,7 +21,7 @@ export function InvoiceTemplate({
   autoPrint = false,
 }) {
   const [pdfUrl, setPdfUrl] = useState(null);
-  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfLoading, _setPdfLoading] = useState(false);
   const [showPdfModal, setShowPdfModal] = useState(false);
   const hasAutoPrintedRef = useRef(false);
   const { data, isLoading, isError, error } = useQuery({
@@ -207,32 +205,6 @@ export function InvoiceTemplate({
     return result + " only";
   }
 
-  async function handleOpenPdfPreview() {
-    if (!id) return;
-    setPdfLoading(true);
-    try {
-      const paper = "A5";
-      const res = await fetch(`${baseUrl}/viewInvoices/${id}/pdf?paper=${encodeURIComponent(paper)}&orientation=landscape`, {
-        method: "GET",
-        credentials: "include",
-        headers: { Accept: "application/pdf" },
-      });
-
-      if (!res.ok) throw new Error(`Failed to fetch PDF: ${res.status}`);
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      setPdfUrl(url);
-      setShowPdfModal(true);
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error(e);
-      alert(e.message || "Failed to load PDF preview");
-    } finally {
-      setPdfLoading(false);
-    }
-  }
-
   function closePdfModal() {
     setShowPdfModal(false);
     if (pdfUrl) {
@@ -264,13 +236,13 @@ export function InvoiceTemplate({
   const itemPages =
     invoiceItems.length > 0
       ? Array.from(
-        { length: Math.ceil(invoiceItems.length / ITEMS_PER_PAGE) },
-        (_, pageIndex) =>
-          invoiceItems.slice(
-            pageIndex * ITEMS_PER_PAGE,
-            (pageIndex + 1) * ITEMS_PER_PAGE,
-          ),
-      )
+          { length: Math.ceil(invoiceItems.length / ITEMS_PER_PAGE) },
+          (_, pageIndex) =>
+            invoiceItems.slice(
+              pageIndex * ITEMS_PER_PAGE,
+              (pageIndex + 1) * ITEMS_PER_PAGE,
+            ),
+        )
       : [[]];
 
   const totalPages = itemPages.length;
@@ -283,7 +255,6 @@ export function InvoiceTemplate({
         sheetIndex * pagesPerSheet + pagesPerSheet,
       ),
   );
-
 
   useEffect(() => {
     if (!data || !autoPrint || hasAutoPrintedRef.current) return;
@@ -325,11 +296,11 @@ export function InvoiceTemplate({
                       </div>
                       <header className="inv-top">
                         <div className="inv-left">
-                          <h2 className="company">{data.invoice_from}</h2>
+                          <h2 className="company-seller">
+                            {data.invoice_from}
+                          </h2>
                           <p className="text-s">{data.address_from}</p>
-                          <p className="text-s">
-                            Phone: {data.phone_from}
-                          </p>
+                          <p className="text-s">Phone: {data.phone_from}</p>
                         </div>
 
                         <div className="inv-right">
@@ -382,7 +353,6 @@ export function InvoiceTemplate({
                         </thead>
                         <tbody className="table-body-border-bottom">
                           {pageItems.length > 0 ? (
-
                             pageItems.map((item, idx) => {
                               const baseAmount =
                                 Number(item.rate || 0) *
@@ -413,9 +383,7 @@ export function InvoiceTemplate({
                                   <td>{item.hsn_code || "-"}</td>
                                   <td>{formatAmt(item.mrp ?? 0)}</td>
                                   <td>{formatAmt(item.rate ?? 0)}</td>
-                                  <td>
-                                    {formatPercent(item.discount || 0)}
-                                  </td>
+                                  <td>{formatPercent(item.discount || 0)}</td>
                                   <td>{formatPercent(item.sgst || 0)}</td>
                                   <td>{formatPercent(item.cgst || 0)}</td>
                                   <td>{formatAmt(lineAmount)}</td>
@@ -430,20 +398,27 @@ export function InvoiceTemplate({
                             </tr>
                           )}
 
-                          {Array.from({ length: empty_rows }).map((_, index )=> {
-                            return <tr className="empty-row" key={`empty-${index}`}>
-                              <td>&nbsp;</td>
-                              <td></td>
-                              <td></td>
-                              <td></td>
-                              <td></td>
-                              <td></td>
-                              <td></td>
-                              <td></td>
-                              <td></td>
-                              <td></td>
-                            </tr>
-                          })}
+                          {Array.from({ length: empty_rows }).map(
+                            (_, index) => {
+                              return (
+                                <tr
+                                  className="empty-row"
+                                  key={`empty-${index}`}
+                                >
+                                  <td>&nbsp;</td>
+                                  <td></td>
+                                  <td></td>
+                                  <td></td>
+                                  <td></td>
+                                  <td></td>
+                                  <td></td>
+                                  <td></td>
+                                  <td></td>
+                                  <td></td>
+                                </tr>
+                              );
+                            },
+                          )}
                         </tbody>
                       </table>
                       <div className="subTotalContainer">
@@ -489,17 +464,15 @@ export function InvoiceTemplate({
                           </div>
                           <div className="inner-right-block">
                             {!isStockIn ? (
-                              <>
-                                <img className="qr" src={qrSrc} alt="QR code" />
-                                <span className="company-name">
-                                  For {data.invoice_from || "Business"}
-                                </span>
-                              </>
+                              <img className="qr" src={qrSrc} alt="QR code" />
                             ) : (
                               <span>Seller: {data.invoice_from || "-"}</span>
                             )}
                           </div>
                           <div className="inner-middle-down-block">
+                            <span className="company-name">
+                              For {data.invoice_from || "Business"}
+                            </span>
                             <a href="#" className="auth-sig">
                               Authorised Signatory
                             </a>
@@ -513,6 +486,12 @@ export function InvoiceTemplate({
                           <div className="tot-line">
                             <span>CGST PAYABLE</span>
                             <span>{formatAmt(data.cgst_total)}</span>
+                          </div>
+                          <div className="tot-line">
+                            <span>IGST PAYABLE</span>
+                            <span>
+                              {formatAmt(data.cgst_total + data.sgst_total)}
+                            </span>
                           </div>
                           <div className="tot-line">
                             <span>DISCOUNT</span>
@@ -579,29 +558,48 @@ export function InvoiceTemplate({
           {pdfLoading ? "Loading PDF..." : "Download or Print Invoice"}
         </button> */}
 
-        <button type="button" className="invoice-action-btn invoice-action-btn-primary" onClick={handlePrintInvoice} disabled={pdfLoading} >{pdfLoading ? "Loading PDF..." : "Print Invoice"} </button>
+        <button
+          type="button"
+          className="invoice-action-btn invoice-action-btn-primary"
+          onClick={handlePrintInvoice}
+          disabled={pdfLoading}
+        >
+          {pdfLoading ? "Loading PDF..." : "Print Invoice"}{" "}
+        </button>
       </div>
       {showPdfModal && (
         <div className="invoice-pdf-modal-overlay" onClick={closePdfModal}>
-          <div className="invoice-pdf-modal" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="invoice-pdf-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="invoice-pdf-modal-actions">
               <button
                 type="button"
                 onClick={() => {
                   const iframe = document.getElementById("invoice-pdf-iframe");
-                  if (iframe && iframe.contentWindow) iframe.contentWindow.print();
+                  if (iframe && iframe.contentWindow)
+                    iframe.contentWindow.print();
                 }}
               >
                 Print
               </button>
-              <a href={pdfUrl} download={`invoice-${displayInvoiceNumber || id}.pdf`}>
+              <a
+                href={pdfUrl}
+                download={`invoice-${displayInvoiceNumber || id}.pdf`}
+              >
                 <button type="button">Download</button>
               </a>
               <button type="button" onClick={closePdfModal}>
                 Close
               </button>
             </div>
-            <iframe id="invoice-pdf-iframe" title="Invoice PDF" src={pdfUrl} style={{ width: "100%", height: "80vh", border: "none" }} />
+            <iframe
+              id="invoice-pdf-iframe"
+              title="Invoice PDF"
+              src={pdfUrl}
+              style={{ width: "100%", height: "80vh", border: "none" }}
+            />
           </div>
         </div>
       )}

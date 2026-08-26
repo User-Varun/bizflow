@@ -6,12 +6,10 @@ body {
   /* avoid gray bleed in captures */
 }
 
-
 .empty-row td {
   border-top: none !important;
   border-bottom: none !important;
 }
-
 
 .invoice-container {
   margin: 0 auto;
@@ -22,8 +20,6 @@ body {
   box-shadow: none;
   /* disable shadow to prevent gray artifacts in PDF */
 }
-
-
 
 .invoice-pages-stack {
   width: 100%;
@@ -54,7 +50,6 @@ body {
 }
 
 .inv-top {
-
   display: grid;
   border-bottom: 2px solid black;
   grid-template-columns: 1fr 1fr !important;
@@ -92,6 +87,11 @@ body {
   font-family: fangsong;
   text-align: center;
   padding: 0.55rem 0.3rem;
+}
+
+.company-seller {
+  font-size: 1.5rem !important;
+  font-weight: bold;
 }
 
 .company {
@@ -178,7 +178,6 @@ body {
   white-space: nowrap;
 }
 
-
 .discount-cell span {
   color: #5b667b;
   font-weight: 600;
@@ -258,8 +257,6 @@ body {
   position: relative;
 }
 
-
-
 .invoice-page-tag {
   position: absolute;
   top: -0.4rem;
@@ -287,10 +284,9 @@ body {
 
 .company-name {
   font-size: 11px;
-  text-align: center;
+  text-align: right;
   margin-top: 0.3rem;
   display: block;
-  max-width: 200px;
   word-wrap: break-word;
 }
 
@@ -380,8 +376,9 @@ body {
 }
 
 .inner-middle-down-block {
-  grid-column: 1 / -1;
-  justify-self: stretch;
+  grid-column: 2;
+  justify-self: end;
+  width: 100%;
   text-align: right;
   margin-top: 0.5rem;
 }
@@ -492,7 +489,6 @@ body {
 }
 
 @media print {
-
   @media print {
     .qr {
       width: 150px !important;
@@ -563,7 +559,6 @@ body {
     background: white !important;
   }
 
-
   @page {
     size: A5 landscape;
     margin: 2mm;
@@ -611,9 +606,6 @@ body {
     position: relative !important;
   } */
 
-
-
-
   .right-block {
     width: 30%;
     border-left: 1px solid black;
@@ -622,5 +614,4 @@ body {
     flex-direction: column;
     gap: 0.35rem;
   }
-
 }
