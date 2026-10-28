@@ -86,9 +86,11 @@ const assertMandatoryTenantPaymentDetails = (details) => {
     );
   }
 
-  if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(details.ifsc_code)) {
-    throw new AppError("invalid IFSC code format", 400);
-  }
+  // removed check for ifsc code format
+
+  // if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(details.ifsc_code)) {
+  //   throw new AppError("invalid IFSC code format", 400);
+  // }
 };
 
 const signToken = (userId, tenantId) => {
@@ -285,7 +287,8 @@ exports.forgotPassword = catchAsync(async (req, res, _next) => {
   if (!tenant) {
     return res.status(200).json({
       status: "success",
-      message: "If an account exists for that email, a reset link has been sent.",
+      message:
+        "If an account exists for that email, a reset link has been sent.",
     });
   }
 
@@ -296,7 +299,8 @@ exports.forgotPassword = catchAsync(async (req, res, _next) => {
   if (!user) {
     return res.status(200).json({
       status: "success",
-      message: "If an account exists for that email, a reset link has been sent.",
+      message:
+        "If an account exists for that email, a reset link has been sent.",
     });
   }
 
