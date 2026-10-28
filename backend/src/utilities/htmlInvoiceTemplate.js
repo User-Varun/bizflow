@@ -28,6 +28,7 @@ function buildItemsTableRows(items) {
         <tr>
           <td>${idx + 1}</td>
           <td>${escapeHtml(String(item.product_qty || 0))}</td>
+          <td>${escapeHtml(String(item.free_quantity || 0))}</td>
           <td class="prod-col prod-name">${escapeHtml(item.name || "")}</td>
           <td>${escapeHtml(item.hsn_code || "-")}</td>
           <td>₹ ${(Number(item.mrp) || 0).toFixed(2)}</td>
@@ -207,6 +208,7 @@ function renderInvoiceHtml(data) {
                   <colgroup>
                     <col class="inv-col-sn" />
                     <col class="inv-col-qty" />
+                    <col class="inv-col-free" />
                     <col class="inv-col-product" />
                     <col class="inv-col-hsn" />
                     <col class="inv-col-mrp" />
@@ -220,6 +222,7 @@ function renderInvoiceHtml(data) {
                     <tr>
                       <th>Sn.</th>
                       <th>QTY</th>
+                      <th>FREE</th>
                       <th>Product</th>
                       <th>HSN</th>
                       <th>MRP (₹)</th>
@@ -231,7 +234,7 @@ function renderInvoiceHtml(data) {
                     </tr>
                   </thead>
                   <tbody>
-                    ${itemsRows || "<tr><td colSpan=10 style='text-align:center'>NO Items available</td></tr>"}
+                    ${itemsRows || "<tr><td colSpan=11 style='text-align:center'>NO Items available</td></tr>"}
                   </tbody>
                 </table>
 

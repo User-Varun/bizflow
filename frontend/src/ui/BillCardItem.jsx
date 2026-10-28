@@ -11,6 +11,7 @@ import "../styles/productCard.css";
 
 export function BillCardItem({ res }) {
   const rateElRef = useRef(null);
+  const mrpElRef = useRef(null);
   const discountElRef = useRef(null);
 
   const mrp = Number(res?.mrp ?? 0);
@@ -48,6 +49,15 @@ export function BillCardItem({ res }) {
       hasExplicitRate && Number.isFinite(parsedExplicitRate)
         ? Math.max(0, parsedExplicitRate)
         : safeBaseRate;
+    const rawMrp = searchItemsState.mrp?.[id];
+    const parsedMrp = Number(rawMrp);
+    const selectedMrp =
+      isStockIn &&
+      rawMrp != null &&
+      String(rawMrp).trim() !== "" &&
+      Number.isFinite(parsedMrp)
+        ? Math.max(0, parsedMrp)
+        : safeMrp;
     const discountInput = Number(searchItemsState.discount?.[id] ?? 0);
     const safeDiscount = Number.isFinite(discountInput)
       ? Math.max(0, Math.min(100, discountInput))
@@ -58,25 +68,43 @@ export function BillCardItem({ res }) {
     if (qty <= 0) return; // nothing to add
 
     const exits = billState.invoice_items.find(
-      (item) => String(item.id || "").trim() === id,
+      (item) =>
+        String(item.id || "").trim() === id &&
+        Number(item.mrp ?? 0) === selectedMrp,
     );
 
     if (exits) {
       // update existing item's property
 
       billToUpdate = billState.invoice_items.map((item) => {
-        return item.id === id
-          ? {
-              ...item,
-              product_catalog_id:
-                item.product_catalog_id || resolvedProductCatalogId,
-              item_qty: (item.item_qty || 0) + qty,
-              rate: safeRate,
-              discount: safeDiscount,
-              cgst: safeCgst,
-              sgst: safeSgst,
-            }
-          : item;
+        if (
+          String(item.id || "").trim() !== id ||
+          Number(item.mrp ?? 0) !== selectedMrp
+        ) {
+          return item;
+        }
+
+        if (safeRate === 0) {
+          return {
+            ...item,
+            product_catalog_id:
+              item.product_catalog_id || resolvedProductCatalogId,
+            mrp: selectedMrp,
+            free_quantity: Number(item.free_quantity || 0) + qty,
+          };
+        }
+
+        return {
+          ...item,
+          product_catalog_id:
+            item.product_catalog_id || resolvedProductCatalogId,
+          mrp: selectedMrp,
+          item_qty: Number(item.item_qty || 0) + qty,
+          rate: safeRate,
+          discount: safeDiscount,
+          cgst: safeCgst,
+          sgst: safeSgst,
+        };
       });
 
       billDispatch({
@@ -90,9 +118,12 @@ export function BillCardItem({ res }) {
         ...billState.invoice_items,
         {
           ...res,
+          draft_line_id: `${id}-${selectedMrp}-${Date.now()}-${Math.random()}`,
           product_catalog_id: resolvedProductCatalogId,
-          item_qty: qty,
-          rate: safeRate,
+          mrp: selectedMrp,
+          item_qty: safeRate === 0 ? 0 : qty,
+          free_quantity: safeRate === 0 ? qty : 0,
+          rate: safeRate === 0 ? safeBaseRate : safeRate,
           discount: safeDiscount,
           cgst: safeCgst,
           sgst: safeSgst,
@@ -108,6 +139,7 @@ export function BillCardItem({ res }) {
     // reset the selected qty for this product only
     searchItemsDispatch({ type: "RESET_QTY", payload: { id } });
     searchItemsDispatch({ type: "RESET_RATE", payload: { id } });
+    searchItemsDispatch({ type: "RESET_MRP", payload: { id } });
     searchItemsDispatch({ type: "RESET_DISCOUNT", payload: { id } });
     searchItemsDispatch({ type: "RESET_CGST", payload: { id } });
     searchItemsDispatch({ type: "RESET_SGST", payload: { id } });
@@ -206,6 +238,37 @@ export function BillCardItem({ res }) {
         <div
           className={`bill-price-controls ${isStockIn ? "bill-price-controls-stock-in" : ""}`}
         >
+          {isStockIn ? (
+            <label className="bill-field-row">
+              <span className="bill-field-label">MRP</span>
+              <input
+                ref={mrpElRef}
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder={String(safeMrp)}
+                value={
+                  searchItemsState.mrp?.[res.id] === undefined ||
+                  searchItemsState.mrp?.[res.id] === ""
+                    ? safeMrp
+                    : searchItemsState.mrp[res.id]
+                }
+                onChange={(e) =>
+                  searchItemsDispatch({
+                    type: "SET_MRP",
+                    payload: {
+                      id: res.id,
+                      inputFieldValue: e.target.value,
+                    },
+                  })
+                }
+                onMouseLeave={() => {
+                  if (mrpElRef.current) mrpElRef.current.blur();
+                }}
+                className="rate-input"
+              />
+            </label>
+          ) : null}
           <label className="bill-field-row">
             <span className="bill-field-label">Rate</span>
             <input

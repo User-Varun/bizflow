@@ -251,6 +251,7 @@ export function BillDetails({ setShowInvoice, setBillId }) {
         unit_name: item.unit_name,
         unit_qty: Number(item.unit_qty || 0),
         product_qty: Number(item.item_qty || 0),
+        free_quantity: Number(item.free_quantity || 0),
         rate: Number(item.rate || 0),
         mrp: Number(item.mrp || 0),
         cgst: Number(item.cgst || 2.5),
@@ -274,7 +275,16 @@ export function BillDetails({ setShowInvoice, setBillId }) {
 
   function handleRemoveBillItem(itemToRemove) {
     const updatedItems = state.invoice_items.filter((item) => {
-      if (item.id && itemToRemove.id) return item.id !== itemToRemove.id;
+      if (itemToRemove.draft_line_id) {
+        return item.draft_line_id !== itemToRemove.draft_line_id;
+      }
+
+      if (item.id && itemToRemove.id) {
+        return (
+          item.id !== itemToRemove.id ||
+          Number(item.mrp || 0) !== Number(itemToRemove.mrp || 0)
+        );
+      }
 
       return !(
         item.name === itemToRemove.name &&
@@ -503,7 +513,10 @@ export function BillDetails({ setShowInvoice, setBillId }) {
               return (
                 <ProductCard
                   res={item}
-                  key={item.id || `${item.name}-${item.brand}`}
+                  key={
+                    item.draft_line_id ||
+                    `${item.id || `${item.name}-${item.brand}`}-${item.mrp}`
+                  }
                   billDetailsCard={true}
                   onRemove={handleRemoveBillItem}
                 />

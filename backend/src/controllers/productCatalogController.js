@@ -224,6 +224,7 @@ exports.updateProductDetails = catchAsync(async (req, res, next) => {
     if (!updatedRows) throw new AppError("product not found", 404);
 
     // Keep current in-stock inventory cards aligned with catalog metadata edits.
+    // MRP is a stock-bucket attribute, so catalog edits must not rewrite it.
     await Inventory.update(
       {
         name: productDetails.name,
@@ -231,14 +232,12 @@ exports.updateProductDetails = catchAsync(async (req, res, next) => {
         hsn_code: productDetails.hsn_code,
         unit_name: productDetails.unit_name,
         unit_qty: productDetails.unit_qty,
-        mrp: productDetails.mrp,
         rate: productDetails.rate,
       },
       {
         where: {
           tenant_id: tenant.id,
           product_catalog_id: productId,
-          product_qty: { [Op.gt]: 0 },
         },
         transaction,
       },

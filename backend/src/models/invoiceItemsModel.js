@@ -50,6 +50,11 @@ const InvoiceItem = sequelize.define("invoice_item", {
     type: DataTypes.DOUBLE,
     allowNull: false,
   },
+  free_quantity: {
+    type: DataTypes.DOUBLE,
+    allowNull: false,
+    defaultValue: 0,
+  },
   rate: {
     type: DataTypes.DOUBLE,
     allowNull: false,

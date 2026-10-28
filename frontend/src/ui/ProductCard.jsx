@@ -104,6 +104,16 @@ export function ProductCard({
             )}
             {billDetailsCard ? (
               <span className="product-compact-chip">
+                MRP: {formatCurrencyAmount(res?.mrp || 0)}
+              </span>
+            ) : null}
+            {billDetailsCard && Number(res?.free_quantity || 0) > 0 ? (
+              <span className="product-compact-chip qty-highlight">
+                Free: {formatQuantity(res.free_quantity)}
+              </span>
+            ) : null}
+            {billDetailsCard ? (
+              <span className="product-compact-chip">
                 Disc: {formatPercent(res?.discount || 0)}
               </span>
             ) : null}

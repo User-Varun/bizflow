@@ -140,33 +140,37 @@ body {
 }
 
 .inv-col-qty {
-  width: 6%;
+  width: 5%;
+}
+
+.inv-col-free {
+  width: 5%;
 }
 
 .inv-col-product {
-  width: 35%;
+  width: 29%;
 }
 
 .inv-col-hsn {
-  width: 10%;
+  width: 8%;
 }
 
 .inv-col-mrp,
 .inv-col-rate {
-  width: 10%;
+  width: 8%;
 }
 
 .inv-col-discount {
-  width: 7%;
+  width: 6%;
 }
 
 .inv-col-sgst,
 .inv-col-cgst {
-  width: 7%;
+  width: 6%;
 }
 
 .inv-col-amount {
-  width: 12%;
+  width: 16%;
 }
 
 .prod-col {
