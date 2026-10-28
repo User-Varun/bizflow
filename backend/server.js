@@ -159,6 +159,13 @@ async function ensureDealerTable() {
   `);
 }
 
+async function ensureInvoiceFreeQuantityColumn() {
+  await sequelize.query(`
+    ALTER TABLE "invoice_items"
+    ADD COLUMN IF NOT EXISTS "free_quantity" DOUBLE PRECISION NOT NULL DEFAULT 0;
+  `);
+}
+
 async function ensureProductCatalogDealerColumn() {
   await sequelize.query(`
     ALTER TABLE "product_catalogs"
@@ -287,6 +294,7 @@ async function server() {
     await ensureUserNameColumn();
     await ensureUserPasswordResetColumns();
     await ensureProductCatalogRateColumn();
+    await ensureInvoiceFreeQuantityColumn();
     await ensureDealerTable();
     await ensureProductCatalogDealerColumn();
     await ensureInvoiceDealerColumn();

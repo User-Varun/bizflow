@@ -12,19 +12,22 @@ exports.updateInventory = async ({
 }) => {
   for (const item of invoiceItems) {
     let inventoryItem = null;
+    const totalQuantity =
+      Number(item.product_qty || 0) + Number(item.free_quantity || 0);
 
     if (item.product_catalog_id) {
       inventoryItem = await Inventory.findOne({
         where: {
           tenant_id: tenantId,
           product_catalog_id: item.product_catalog_id,
+          mrp: Number(item.mrp),
         },
         transaction,
         lock: transaction.LOCK.UPDATE,
       });
     }
 
-    if (!inventoryItem) {
+    if (!inventoryItem && !item.product_catalog_id) {
       inventoryItem = await Inventory.findOne({
         where: {
           tenant_id: tenantId,
@@ -33,6 +36,7 @@ exports.updateInventory = async ({
           hsn_code: item.hsn_code,
           unit_name: item.unit_name,
           unit_qty: item.unit_qty,
+          mrp: Number(item.mrp),
         },
         transaction,
         lock: transaction.LOCK.UPDATE,
@@ -41,7 +45,8 @@ exports.updateInventory = async ({
 
     if (inventoryItem) {
       if (invoiceType === "stock_in") {
-        inventoryItem.product_qty += item.product_qty;
+        inventoryItem.product_qty =
+          Number(inventoryItem.product_qty || 0) + totalQuantity;
 
         if (Number.isFinite(Number(item.rate))) {
           inventoryItem.rate = Number(item.rate);
@@ -49,14 +54,15 @@ exports.updateInventory = async ({
       }
 
       if (invoiceType === "stock_out") {
-        if (inventoryItem.product_qty < item.product_qty) {
+        if (inventoryItem.product_qty < totalQuantity) {
           throw new AppError(
-            `Insufficient stock for item: ${item.name}. Available: ${inventoryItem.product_qty}, Requested: ${item.product_qty}`,
+            `Insufficient stock for item: ${item.name}. Available: ${inventoryItem.product_qty}, Requested: ${totalQuantity}`,
             400,
           );
         }
 
-        inventoryItem.product_qty -= item.product_qty;
+        inventoryItem.product_qty =
+          Number(inventoryItem.product_qty || 0) - totalQuantity;
       }
 
       await inventoryItem.save({ transaction });
@@ -70,7 +76,7 @@ exports.updateInventory = async ({
           product_catalog_id: item.product_catalog_id || null,
           name: item.name,
           brand: item.brand,
-          product_qty: item.product_qty,
+          product_qty: totalQuantity,
           hsn_code: item.hsn_code,
           unit_name: item.unit_name,
           unit_qty: item.unit_qty,

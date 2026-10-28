@@ -54,6 +54,7 @@ export function EditInvoiceModal({
           unit_name: String(item.unit_name || ""),
           unit_qty: toNumber(item.unit_qty, 0),
           product_qty: toNumber(item.product_qty, 0),
+          free_quantity: toNumber(item.free_quantity, 0),
           rate: toNumber(item.rate, 0),
           mrp: toNumber(item.mrp, 0),
           discount: toNumber(item.discount, 0),
@@ -106,6 +107,7 @@ export function EditInvoiceModal({
         unit_name: String(selected.unit_name || ""),
         unit_qty: toNumber(selected.unit_qty, 0),
         product_qty: 1,
+        free_quantity: 0,
         rate: toNumber(selected.rate ?? selected.mrp, 0),
         mrp: toNumber(selected.mrp, 0),
         discount: 0,
@@ -144,6 +146,7 @@ export function EditInvoiceModal({
       unit_name: String(item.unit_name || "").trim(),
       unit_qty: toNumber(item.unit_qty, 0),
       product_qty: toNumber(item.product_qty, 0),
+      free_quantity: toNumber(item.free_quantity, 0),
       rate: toNumber(item.rate, 0),
       mrp: toNumber(item.mrp, 0),
       discount: toNumber(item.discount, 0),
@@ -261,7 +264,7 @@ export function EditInvoiceModal({
               <option value="">Select item to add</option>
               {sourceOptions.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.name} ({item.brand})
+                  {item.name} ({item.brand}) - MRP {toNumber(item.mrp, 0)}
                 </option>
               ))}
             </select>
@@ -280,6 +283,8 @@ export function EditInvoiceModal({
                 <tr>
                   <th>Item</th>
                   <th>Qty</th>
+                  <th>Free</th>
+                  <th>MRP</th>
                   <th>Rate</th>
                   <th>Disc %</th>
                   <th>CGST %</th>
@@ -299,7 +304,7 @@ export function EditInvoiceModal({
                     <td>
                       <input
                         type="number"
-                        min="1"
+                        min="0"
                         step="any"
                         value={item.product_qty}
                         onChange={(e) =>
@@ -310,6 +315,46 @@ export function EditInvoiceModal({
                             item.rowId,
                             "product_qty",
                             String(Math.max(0, Number(e.target.value) || 0)),
+                          )
+                        }
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={item.free_quantity}
+                        onChange={(e) =>
+                          updateItem(
+                            item.rowId,
+                            "free_quantity",
+                            e.target.value,
+                          )
+                        }
+                        onBlur={(e) =>
+                          updateItem(
+                            item.rowId,
+                            "free_quantity",
+                            String(Math.max(0, Number(e.target.value) || 0)),
+                          )
+                        }
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.mrp}
+                        onChange={(e) =>
+                          updateItem(item.rowId, "mrp", e.target.value)
+                        }
+                        onBlur={(e) =>
+                          updateItem(
+                            item.rowId,
+                            "mrp",
+                            toFixedTwo(e.target.value, 0, { clampMin: 0 }),
                           )
                         }
                       />

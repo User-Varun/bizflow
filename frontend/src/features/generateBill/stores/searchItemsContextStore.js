@@ -4,6 +4,7 @@ export const SearchItemsContext = createContext();
 
 export const initalValue = {
   rate: {},
+  mrp: {},
   discount: {},
   cgst: {},
   sgst: {},
@@ -70,6 +71,15 @@ export function reducerFn(state, action) {
         },
       };
 
+    case "SET_MRP":
+      return {
+        ...state,
+        mrp: {
+          ...state.mrp,
+          [action.payload.id]: action.payload.inputFieldValue,
+        },
+      };
+
     case "SET_DISCOUNT":
       return {
         ...state,
@@ -116,6 +126,14 @@ export function reducerFn(state, action) {
         ...state,
         rate: {
           ...state.rate,
+          [action.payload.id]: "",
+        },
+      };
+    case "RESET_MRP":
+      return {
+        ...state,
+        mrp: {
+          ...state.mrp,
           [action.payload.id]: "",
         },
       };

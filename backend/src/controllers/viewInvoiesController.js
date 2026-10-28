@@ -10,7 +10,9 @@ const { calculateInvoiceData } = require("../utilities/calculateInvoiceData");
 const { Op, literal } = require("sequelize");
 
 function itemIdentityKey(item) {
-  if (item.product_catalog_id) return `catalog:${item.product_catalog_id}`;
+  if (item.product_catalog_id) {
+    return `catalog:${item.product_catalog_id}:mrp:${Number(item.mrp || 0)}`;
+  }
 
   return [
     "manual",
@@ -27,6 +29,7 @@ function itemIdentityKey(item) {
       .trim()
       .toLowerCase(),
     Number(item.unit_qty || 0),
+    Number(item.mrp || 0),
   ].join("::");
 }
 
@@ -35,7 +38,8 @@ function buildQtyMap(items) {
 
   for (const item of items) {
     const key = itemIdentityKey(item);
-    const qty = Number(item.product_qty || 0);
+    const qty =
+      Number(item.product_qty || 0) + Number(item.free_quantity || 0);
     const existing = map.get(key);
 
     if (existing) {
@@ -84,13 +88,14 @@ async function applyInventoryDelta({
         where: {
           tenant_id: tenantId,
           product_catalog_id: refItem.product_catalog_id,
+          mrp: Number(refItem.mrp),
         },
         transaction,
         lock: transaction.LOCK.UPDATE,
       });
     }
 
-    if (!inventoryItem) {
+    if (!inventoryItem && !refItem.product_catalog_id) {
       inventoryItem = await Inventory.findOne({
         where: {
           tenant_id: tenantId,
@@ -99,6 +104,7 @@ async function applyInventoryDelta({
           hsn_code: refItem.hsn_code,
           unit_name: refItem.unit_name,
           unit_qty: refItem.unit_qty,
+          mrp: Number(refItem.mrp || 0),
         },
         transaction,
         lock: transaction.LOCK.UPDATE,
@@ -144,10 +150,6 @@ async function applyInventoryDelta({
     }
 
     inventoryItem.product_qty = nextQty;
-
-    if (Number.isFinite(Number(refItem.mrp))) {
-      inventoryItem.mrp = Number(refItem.mrp);
-    }
 
     if (Number.isFinite(Number(refItem.rate))) {
       inventoryItem.rate = Number(refItem.rate);
@@ -496,6 +498,7 @@ exports.editInvoice = catchAsync(async (req, res, next) => {
         unit_name: String(item.unit_name || "").trim(),
         unit_qty: Number(item.unit_qty || 0),
         product_qty: Number(item.product_qty || 0),
+        free_quantity: Number(item.free_quantity || 0),
         rate: Number(item.rate || 0),
         mrp: Number(item.mrp || 0),
         cgst: Number(item.cgst ?? req.body?.taxDetails?.cgst ?? defaultCgst),
@@ -519,13 +522,20 @@ exports.editInvoice = catchAsync(async (req, res, next) => {
 
       if (
         !Number.isFinite(normalized.product_qty) ||
-        normalized.product_qty <= 0
+        normalized.product_qty < 0 ||
+        !Number.isFinite(normalized.free_quantity) ||
+        normalized.free_quantity < 0 ||
+        normalized.product_qty + normalized.free_quantity <= 0
       ) {
         throw new AppError("item quantity must be greater than zero", 400);
       }
 
       if (!Number.isFinite(normalized.rate) || normalized.rate < 0) {
         throw new AppError("item rate must be a non-negative number", 400);
+      }
+
+      if (!Number.isFinite(normalized.mrp) || normalized.mrp < 0) {
+        throw new AppError("item MRP must be a non-negative number", 400);
       }
 
       if (

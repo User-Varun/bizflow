@@ -328,6 +328,7 @@ export function InvoiceTemplate({
                         <colgroup>
                           <col className="inv-col-sn" />
                           <col className="inv-col-qty" />
+                          <col className="inv-col-free" />
                           <col className="inv-col-product" />
                           <col className="inv-col-hsn" />
                           <col className="inv-col-mrp" />
@@ -341,6 +342,7 @@ export function InvoiceTemplate({
                           <tr>
                             <th>Sn.</th>
                             <th>QTY</th>
+                            <th>FREE</th>
                             <th>Product</th>
                             <th>HSN</th>
                             <th>MRP</th>
@@ -377,6 +379,9 @@ export function InvoiceTemplate({
                                     {pageIndex * ITEMS_PER_PAGE + idx + 1}
                                   </td>
                                   <td>{formatQuantity(item.product_qty)}</td>
+                                  <td>
+                                    {formatQuantity(item.free_quantity || 0)}
+                                  </td>
                                   <td className="prod-col prod-name">
                                     {item.name}
                                   </td>
@@ -392,7 +397,7 @@ export function InvoiceTemplate({
                             })
                           ) : (
                             <tr>
-                              <td colSpan={10} style={{ textAlign: "center" }}>
+                              <td colSpan={11} style={{ textAlign: "center" }}>
                                 NO Items available
                               </td>
                             </tr>
@@ -406,6 +411,7 @@ export function InvoiceTemplate({
                                   key={`empty-${index}`}
                                 >
                                   <td>&nbsp;</td>
+                                  <td></td>
                                   <td></td>
                                   <td></td>
                                   <td></td>

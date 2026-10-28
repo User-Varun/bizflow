@@ -130,6 +130,7 @@ exports.generateInvoice = catchAsync(async (req, res, next) => {
       unit_name,
       unit_qty,
       product_qty,
+      free_quantity,
       rate,
       mrp,
       cgst,
@@ -138,19 +139,43 @@ exports.generateInvoice = catchAsync(async (req, res, next) => {
       product_catalog_id,
     } = item;
 
+    const paidQuantity = Number(product_qty);
+    const freeQuantity = Number(free_quantity || 0);
+    const itemRate = Number(rate);
+    const itemMrp = Number(mrp);
+
+    if (
+      !Number.isFinite(paidQuantity) ||
+      paidQuantity < 0 ||
+      !Number.isFinite(freeQuantity) ||
+      freeQuantity < 0 ||
+      paidQuantity + freeQuantity <= 0
+    ) {
+      throw new AppError("item quantity must be greater than zero", 400);
+    }
+
+    if (!Number.isFinite(itemRate) || itemRate < 0) {
+      throw new AppError("item rate must be a non-negative number", 400);
+    }
+
+    if (!Number.isFinite(itemMrp) || itemMrp < 0) {
+      throw new AppError("item MRP must be a non-negative number", 400);
+    }
+
     return {
       name,
       brand,
       hsn_code,
       unit_name,
       unit_qty,
-      product_qty,
-      rate,
-      mrp,
+      product_qty: paidQuantity,
+      free_quantity: freeQuantity,
+      rate: itemRate,
+      mrp: itemMrp,
       cgst,
       sgst,
       discount,
-      total_amount: rate * product_qty,
+      total_amount: itemRate * paidQuantity,
       product_catalog_id,
     };
   });
@@ -266,15 +291,15 @@ exports.generateInvoice = catchAsync(async (req, res, next) => {
         let bill_state;
 
         if (amount >= 0 && payment_method) {
-          if (amount === 0) {
+          if (amount === grand_total) {
+            pending_amount = 0;
+            bill_state = "paid";
+          } else if (amount === 0) {
             pending_amount = grand_total;
             bill_state = "pending";
           } else if (amount < grand_total) {
             pending_amount = grand_total - amount;
             bill_state = "partial";
-          } else if (amount === grand_total) {
-            pending_amount = 0;
-            bill_state = "paid";
           }
         }
 
